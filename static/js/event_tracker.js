@@ -6,9 +6,42 @@
  */
 
 const VibeTracker = {
+  _eventQueue: [],
+  _isGreReady: false,
+  _checkInterval: null,
+
   init(config) {
     this.visitorId = config.visitorId;
     console.log('Real-time Event Tracker Initialized for visitor:', this.visitorId);
+    this._startGreCheck();
+  },
+
+  _startGreCheck() {
+    this._checkInterval = setInterval(() => {
+      // The sign that v2_event.js is ready is that _gre is no longer a simple array.
+      if (typeof _gre !== 'undefined' && !Array.isArray(_gre)) {
+        this._isGreReady = true;
+        console.log("Google Retail Event library is ready. Processing queue.");
+        this._flushQueue();
+        clearInterval(this._checkInterval);
+      }
+    }, 100); // Check every 100ms
+
+    // Failsafe: stop checking after a few seconds to prevent an infinite loop
+    setTimeout(() => {
+      if (!this._isGreReady) {
+        console.error("Google Retail Event library did not initialize after 5 seconds. Events will not be sent.");
+        clearInterval(this._checkInterval);
+      }
+    }, 5000);
+  },
+
+  _flushQueue() {
+    while (this._eventQueue.length > 0) {
+      const eventData = this._eventQueue.shift();
+      console.log("Flushing event from queue:", eventData);
+      _gre.push(['logEvent', eventData]);
+    }
   },
 
   /**
@@ -16,13 +49,14 @@ const VibeTracker = {
    * @param {object} eventData - The user event payload.
    */
   _logEvent(eventData) {
-    // Add the visitorId to every event
-    const payload = {
-      ...eventData,
-      visitorId: this.visitorId,
-    };
-    console.log("Logging event:", payload);
-    _gre.push(['logEvent', payload]);
+    const payload = { ...eventData, visitorId: this.visitorId };
+    if (this._isGreReady) {
+      console.log("Logging event directly:", payload);
+      _gre.push(['logEvent', payload]);
+    } else {
+      console.log("Queuing event:", payload);
+      this._eventQueue.push(payload);
+    }
   },
 
   /**

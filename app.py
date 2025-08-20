@@ -136,7 +136,7 @@ def search():
         return render_template('search_results.html', error=str(e), query=query)
 
 
-@app.route('/product/<path:product_id>')
+@app.route('/product/<string:product_id>')
 def product_detail(product_id):
     """
     Fetches and displays the details for a single product.

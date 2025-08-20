@@ -40,9 +40,7 @@
 
 {% block scripts %}
 <script>
-    window.addEventListener('load', function() {
-        const cartItems = {{ cart|tojson|safe }};
-        VibeTracker.trackShoppingCartView(cartItems);
-    });
+    const cartItems = {{ cart|tojson|safe }};
+    VibeTracker.trackShoppingCartView(cartItems);
 </script>
 {% endblock %}

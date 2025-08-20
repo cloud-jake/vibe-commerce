@@ -19,8 +19,6 @@
 
 {% block scripts %}
 <script>
-    window.addEventListener('load', function() {
-        VibeTracker.trackPurchaseComplete({{ order|tojson|safe }});
-    });
+    VibeTracker.trackPurchaseComplete({{ order|tojson|safe }});
 </script>
 {% endblock %}
