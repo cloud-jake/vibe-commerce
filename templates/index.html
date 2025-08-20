@@ -33,7 +33,9 @@
     {% else %}
         <p>No recommendations available at the moment.</p>
     {% endif %}
+{% endblock %}
 
+{% block scripts %}
     <script>
         VibeTracker.trackHomePageView();
     </script>

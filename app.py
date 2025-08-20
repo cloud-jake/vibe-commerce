@@ -144,8 +144,14 @@ def product_detail(product_id):
     product_name = f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}/catalogs/{config.CATALOG_ID}/branches/0/products/{product_id}"
 
     try:
-        product = product_client.get_product(name=product_name)
-        return render_template('product_detail.html', product=product)
+        product_proto = product_client.get_product(name=product_name)
+        # Convert the proto message to a dictionary for reliable JSON serialization
+        product_dict = Product.to_dict(product_proto)
+        return render_template(
+            'product_detail.html',
+            product=product_proto,
+            product_json=product_dict
+        )
     except Exception as e:
         print(f"Error fetching product details: {e}")
         return render_template('product_detail.html', error=str(e))

@@ -8,7 +8,6 @@
 const VibeTracker = {
   init(config) {
     this.visitorId = config.visitorId;
-    // The _gre object is initialized in base.html
     console.log('Real-time Event Tracker Initialized for visitor:', this.visitorId);
   },
 

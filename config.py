@@ -1,5 +1,9 @@
 # config.py
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from a .env file at the earliest possible point.
+load_dotenv()
 
 # --- Google Cloud Project Configuration ---
 # Replace with your Google Cloud project ID

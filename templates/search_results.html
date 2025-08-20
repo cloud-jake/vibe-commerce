@@ -27,7 +27,9 @@
     {% else %}
         <p>No products found for your query.</p>
     {% endif %}
+{% endblock %}
 
+{% block scripts %}
     {% if not error %}
         <script>
             const searchResults = {{ results_json|tojson|safe }};

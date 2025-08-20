@@ -29,7 +29,7 @@
                         <input type="hidden" name="product_title" value="{{ product.title or 'Untitled Product' }}">
                         <input type="hidden" name="product_price" value="{{ product.price_info.price }}">
                         <input type="hidden" name="product_image" value="{{ (product.images[0].uri if product.images) or '' }}">
-                        <button type="submit" onclick="VibeTracker.trackAddToCart({{ product|tojson|safe }})">Add to Cart</button>
+                        <button type="submit" onclick="VibeTracker.trackAddToCart({{ product_json|tojson|safe }})">Add to Cart</button>
                     </form>
                 {% endif %}
             </div>
@@ -40,7 +40,7 @@
 {% block scripts %}
 <script>
     {% if product %}
-    VibeTracker.trackDetailPageView({{ product|tojson|safe }});
+    VibeTracker.trackDetailPageView({{ product_json|tojson|safe }});
     {% endif %}
 </script>
 {% endblock %}
