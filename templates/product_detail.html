@@ -39,8 +39,10 @@
 
 {% block scripts %}
 <script>
-    {% if product %}
-    VibeTracker.trackDetailPageView({{ product_json|tojson|safe }});
-    {% endif %}
+    window.addEventListener('load', function() {
+        {% if product %}
+        VibeTracker.trackDetailPageView({{ product_json|tojson|safe }});
+        {% endif %}
+    });
 </script>
 {% endblock %}

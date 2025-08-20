@@ -197,7 +197,8 @@ def add_to_cart():
     # Update total
     session['cart_total'] = sum(item['price'] * item['quantity'] for item in session['cart'])
 
-    return redirect(url_for('view_cart'))
+    # Redirect back to the page the user came from for a smoother experience
+    return redirect(request.referrer or url_for('index'))
 
 
 @app.route('/cart')
@@ -251,6 +252,6 @@ def purchase_confirmation():
     return render_template('purchase_confirmation.html', order=last_order)
 
 if __name__ == '__main__':
-    # Ensure you have set up your Google Cloud credentials.
-    # For local development, you can use: `gcloud auth application-default login`
-    app.run(debug=True, port=8080)
+    # This block is for running the app directly with `python app.py`
+    # For production, use a WSGI server like Gunicorn.
+    app.run(debug=True, port=5000)

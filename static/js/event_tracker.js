@@ -40,8 +40,8 @@ const VibeTracker = {
    * @param {Array<object>} results - The search results array.
    */
   trackSearchView(query, results) {
-    const productDetails = results.map(r => ({
-      product: { id: r.product.id }
+    const productDetails = results.map(result => ({
+      product: { id: result.id } // Use the top-level ID from the search result
     }));
 
     this._logEvent({

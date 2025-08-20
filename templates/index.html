@@ -37,6 +37,8 @@
 
 {% block scripts %}
     <script>
-        VibeTracker.trackHomePageView();
+        window.addEventListener('load', function() {
+            VibeTracker.trackHomePageView();
+        });
     </script>
 {% endblock %}

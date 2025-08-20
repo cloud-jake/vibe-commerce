@@ -32,9 +32,11 @@
 {% block scripts %}
     {% if not error %}
         <script>
-            const searchResults = {{ results_json|tojson|safe }};
-            const query = {{ query|tojson|safe }};
-            VibeTracker.trackSearchView(query, searchResults);
+            window.addEventListener('load', function() {
+                const searchResults = {{ results_json|tojson|safe }};
+                const query = {{ query|tojson|safe }};
+                VibeTracker.trackSearchView(query, searchResults);
+            });
         </script>
     {% endif %}
 {% endblock %}
