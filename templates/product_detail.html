@@ -39,6 +39,8 @@
 
 {% block scripts %}
 <script>
+    {% if product %}
     VibeTracker.trackDetailPageView({{ product|tojson|safe }});
+    {% endif %}
 </script>
 {% endblock %}

@@ -1,4 +1,5 @@
 # config.py
+import os
 
 # --- Google Cloud Project Configuration ---
 # Replace with your Google Cloud project ID
@@ -18,3 +19,10 @@ SERVING_CONFIG_ID = "vibe-search-1"
 # Replace with your Recommendation Serving Config ID
 # e.g., "recently_viewed_default"
 RECOMMENDATION_SERVING_CONFIG_ID = "recently_viewed_default"
+
+# --- Event Tracking Configuration ---
+# Load the API Key from an environment variable for security.
+API_KEY = os.getenv("RETAIL_API_KEY")
+
+if not API_KEY:
+    print("WARNING: RETAIL_API_KEY environment variable not set. Event tracking will not work.")

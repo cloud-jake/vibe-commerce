@@ -11,6 +11,7 @@ from google.cloud.retail_v2 import (
 from google.cloud.retail_v2.types import (
     PredictRequest,
     Product,
+    SearchResponse,
     SearchRequest,
     UserEvent,
 )
@@ -42,7 +43,9 @@ def inject_shared_variables():
     return dict(
         project_id=config.PROJECT_ID,
         catalog_id=config.CATALOG_ID,
-        visitor_id=session.get('visitor_id')
+        location=config.LOCATION,
+        visitor_id=session.get('visitor_id'),
+        api_key=config.API_KEY
     )
 
 
@@ -119,7 +122,15 @@ def search():
     # --- Call the Retail API ---
     try:
         search_response = search_client.search(search_request)
-        return render_template('search_results.html', results=search_response.results, query=query)
+        # The search_response.results is a list of proto messages, not directly
+        # JSON serializable. Convert them to dicts for the event tracker.
+        results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
+        return render_template(
+            'search_results.html',
+            results=search_response.results,
+            results_json=results_for_js,
+            query=query
+        )
     except Exception as e:
         print(f"Error during search: {e}")
         return render_template('search_results.html', error=str(e), query=query)

@@ -6,21 +6,22 @@
     <title>{% block title %}Vibe Commerce{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-    <!-- Google tag (gtag.js) for Retail Events -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      // IMPORTANT: You must replace G-XXXXXXXXXX with your own Google Analytics Measurement ID.
-      // This is only a placeholder.
-      // The retail event data will be sent to the project_id and catalog_id specified below.
-      gtag('config', 'G-XXXXXXXXXX', {
-          'send_page_view': false, // We will send events manually
-          'retail_catalog_id': '{{ catalog_id }}',
-          'retail_project_id': '{{ project_id }}'
-      });
+    <!-- Google Retail Events via v2_event.js -->
+    <script type="text/javascript">
+        var _gre = _gre || [];
+        // Initialize credentials for the project.
+        // These are used for all subsequent 'logEvent' calls.
+        // IMPORTANT: You must create and provide a valid API Key.
+        _gre.push(['apiKey', '{{ api_key }}']);
+        _gre.push(['projectId', '{{ project_id }}']);
+        _gre.push(['locationId', '{{ location }}']);
+        _gre.push(['catalogId', '{{ catalog_id }}']);
+    
+        (function() {
+          var gre = document.createElement('script'); gre.type = 'text/javascript'; gre.async = true;
+          gre.src = 'https://www.gstatic.com/retail/v2_event.js';
+          var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(gre, s);
+        })();
     </script>
 </head>
 <body>

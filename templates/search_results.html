@@ -28,9 +28,11 @@
         <p>No products found for your query.</p>
     {% endif %}
 
-    <script>
-        const searchResults = {{ results|tojson|safe }};
-        const query = {{ query|tojson|safe }};
-        VibeTracker.trackSearchView(query, searchResults);
-    </script>
+    {% if not error %}
+        <script>
+            const searchResults = {{ results_json|tojson|safe }};
+            const query = {{ query|tojson|safe }};
+            VibeTracker.trackSearchView(query, searchResults);
+        </script>
+    {% endif %}
 {% endblock %}
