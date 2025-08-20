@@ -53,7 +53,7 @@ def inject_shared_variables():
 def initialize_session():
     """Initialize the cart and visitor ID in the session if they don't exist."""
     if 'cart' not in session:
-        session['cart'] = []
+        session['cart'] = {} # Use a dictionary for faster lookups
         session['cart_total'] = 0.0
     if 'visitor_id' not in session:
         session['visitor_id'] = str(uuid.uuid4())
@@ -163,39 +163,36 @@ def add_to_cart():
     product_id = request.form.get('product_id')
     product_title = request.form.get('product_title')
     price_str = request.form.get('product_price')
-    product_price = float(price_str) if price_str else 0.0
+    try:
+        # More robustly handle conversion from form string to float.
+        product_price = float(price_str)
+    except (ValueError, TypeError):
+        # Default to 0.0 if price is missing, not a valid number, or None.
+        product_price = 0.0
     product_image = request.form.get('product_image')
 
     if not product_id:
         return redirect(url_for('index'))
 
-    # Create a dictionary for the product
-    cart_item = {
-        'id': product_id,
-        'title': product_title,
-        'price': product_price,
-        'image': product_image,
-        'quantity': 1 # For simplicity, always add 1
-    }
-
     # Add item to cart
-    current_cart = session['cart']
-    
-    # Check if item is already in cart
-    found = False
-    for item in current_cart:
-        if item['id'] == product_id:
-            item['quantity'] += 1
-            found = True
-            break
-    
-    if not found:
-        current_cart.append(cart_item)
+    cart = session.get('cart', {})
 
-    session['cart'] = current_cart
+    if product_id in cart:
+        # Item exists, just increment quantity
+        cart[product_id]['quantity'] += 1
+    else:
+        # Add new item to cart
+        cart[product_id] = {
+            'id': product_id,
+            'title': product_title,
+            'price': product_price,
+            'image': product_image,
+            'quantity': 1
+        }
+    session['cart'] = cart
 
     # Update total
-    session['cart_total'] = sum(item['price'] * item['quantity'] for item in session['cart'])
+    session['cart_total'] = sum(item['price'] * item['quantity'] for item in cart.values())
 
     # Redirect back to the page the user came from for a smoother experience
     return redirect(request.referrer or url_for('index'))
@@ -204,18 +201,18 @@ def add_to_cart():
 @app.route('/cart')
 def view_cart():
     """Displays the shopping cart."""
-    return render_template('cart.html', cart=session.get('cart', []), total=session.get('cart_total', 0.0))
+    return render_template('cart.html', cart=session.get('cart', {}), total=session.get('cart_total', 0.0))
 
 
 @app.route('/remove_from_cart/<product_id>', methods=['POST'])
 def remove_from_cart(product_id):
     """Removes an item from the cart."""
-    current_cart = session.get('cart', [])
-    # Create a new cart excluding the item to be removed
-    new_cart = [item for item in current_cart if item['id'] != product_id]
-    session['cart'] = new_cart
+    cart = session.get('cart', {})
+    # Safely remove the item if it exists
+    cart.pop(product_id, None)
+    session['cart'] = cart
     # Recalculate total
-    session['cart_total'] = sum(item['price'] * item['quantity'] for item in new_cart)
+    session['cart_total'] = sum(item['price'] * item['quantity'] for item in cart.values())
     return redirect(url_for('view_cart'))
 
 

@@ -11,7 +11,7 @@
     {% else %}
         <div class="cart-container">
             <div class="cart-items">
-                {% for item in cart %}
+                {% for item in cart.values() %}
                 <div class="cart-item">
                     <img src="{{ item.image or 'https://via.placeholder.com/100' }}" alt="{{ item.title }}">
                     <div class="cart-item-info">
@@ -40,7 +40,7 @@
 
 {% block scripts %}
 <script>
-    const cartItems = {{ cart|tojson|safe }};
+    const cartItems = {{ cart.values()|list|tojson|safe }};
     VibeTracker.trackShoppingCartView(cartItems);
 </script>
 {% endblock %}
