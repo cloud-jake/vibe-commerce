@@ -12,4 +12,4 @@ CATALOG_ID = "default_catalog"
 
 # Replace with your Serving Config ID (e.g., "default_serving_config")
 # This is found under your Catalog in the Google Cloud Console.
-SERVING_CONFIG_ID = "default_search"
+SERVING_CONFIG_ID = "vibe-search-1"
