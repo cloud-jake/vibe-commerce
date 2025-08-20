@@ -15,7 +15,11 @@
                     <a href="{{ url_for('product_detail', product_id=result.product.id) }}">
                         <img src="{{ result.product.uri or 'https://via.placeholder.com/200' }}" alt="{{ result.product.title }}">
                         <h3 class="product-title">{{ result.product.title or "Untitled Product" }}</h3>
-                        <p class="price">${{ "%.2f"|format(result.product.price_info.price) }}</p>
+                        {% if result.product.price_info and result.product.price_info.price %}
+                            <p class="price">${{ "%.2f"|format(result.product.price_info.price) }}</p>
+                        {% else %}
+                            <p class="price price-unavailable">Price not available</p>
+                        {% endif %}
                     </a>
                 </div>
             {% endfor %}

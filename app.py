@@ -82,7 +82,8 @@ def add_to_cart():
     """Adds a product to the cart stored in the session."""
     product_id = request.form.get('product_id')
     product_title = request.form.get('product_title')
-    product_price = float(request.form.get('product_price', 0.0))
+    price_str = request.form.get('product_price')
+    product_price = float(price_str) if price_str else 0.0
     product_image = request.form.get('product_image')
 
     if not product_id:

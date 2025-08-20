@@ -45,6 +45,12 @@ header .logo a {
     text-decoration: none;
 }
 
+header .logo img {
+    /* Match the search input height: 1em (font) + 20px (padding) + 2px (border) */
+    height: calc(1em + 22px);
+    vertical-align: middle;
+}
+
 header .search-bar {
     flex-grow: 1;
     margin: 0 40px;
@@ -115,9 +121,13 @@ main {
     margin-bottom: 15px;
 }
 
-.product-card h3 {
+.product-card .product-title {
     font-size: 1.1em;
     margin: 10px 0;
+    /* Ensure long titles don't break the layout */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .product-card .price {
@@ -190,6 +200,14 @@ main {
     font-size: 1.5em;
 }
 
+/* Style for when price is not available */
+.price.price-unavailable,
+.product-price.price-unavailable {
+    color: #777;
+    font-weight: normal;
+    font-style: italic;
+    font-size: 1em;
+}
 /* Footer */
 footer {
     text-align: center;
