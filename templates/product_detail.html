@@ -9,7 +9,7 @@
     {% elif product %}
         <div class="product-detail-container">
             <div class="product-image">
-                <img src="{{ product.uri or 'https://via.placeholder.com/400' }}" alt="{{ product.title }}">
+                <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/400' }}" alt="{{ product.title }}">
             </div>
             <div class="product-info">
                 <h1>{{ product.title or "Product Title Unavailable" }}</h1>
@@ -28,7 +28,7 @@
                         <input type="hidden" name="product_id" value="{{ product.id }}">
                         <input type="hidden" name="product_title" value="{{ product.title or 'Untitled Product' }}">
                         <input type="hidden" name="product_price" value="{{ product.price_info.price }}">
-                        <input type="hidden" name="product_image" value="{{ product.uri }}">
+                        <input type="hidden" name="product_image" value="{{ (product.images[0].uri if product.images) }}">
                         <button type="submit">Add to Cart</button>
                     </form>
                 {% endif %}

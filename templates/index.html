@@ -1,10 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}Welcome - Vibe Commerce{% endblock %}
+{% block title %}Welcome to Vibe Commerce{% endblock %}
 
 {% block content %}
-    <div class="welcome-message">
+    <div class="hero">
         <h1>Welcome to Vibe Commerce</h1>
-        <p>Use the search bar above to find products powered by the Google Cloud Retail API.</p>
+        <p>Discover products that match your vibe.</p>
     </div>
+
+    <h2>Recommended For You</h2>
+
+    {% if error %}
+        <p class="error">Could not load recommendations: {{ error }}</p>
+    {% elif recommendations %}
+        <div class="product-carousel">
+            <div class="product-grid">
+                {% for product in recommendations %}
+                    <div class="product-card">
+                        <a href="{{ url_for('product_detail', product_id=product.id) }}">
+                            <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}" alt="{{ product.title or 'Untitled Product' }}">
+                            <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
+                            {% if product.price_info and product.price_info.currency_code %}
+                                <p class="price">${{ "%.2f"|format(product.price_info.price) }}</p>
+                            {% else %}
+                                <p class="price price-unavailable">Price not available</p>
+                            {% endif %}
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <p>No recommendations available at the moment.</p>
+    {% endif %}
 {% endblock %}

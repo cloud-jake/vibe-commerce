@@ -1,8 +1,19 @@
 import os
+import json
 from flask import Flask, render_template, request, redirect, url_for, session
-
-from google.cloud.retail_v2 import SearchServiceClient, ProductServiceClient
-from google.cloud.retail_v2.types import SearchRequest
+from google.api_core.exceptions import GoogleAPICallError
+from google.cloud.retail_v2 import (
+    PredictionServiceClient,
+    ProductServiceClient,
+    SearchServiceClient,
+)
+from google.cloud.retail_v2.types import (
+    PredictRequest,
+    Product,
+    SearchRequest,
+    UserEvent,
+)
+from google.protobuf import struct_pb2
 
 import config
 
@@ -13,13 +24,16 @@ app.secret_key = os.urandom(24)
 # --- Vertex AI Search Client Initialization ---
 
 # Placement for search results
-placement = f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}/catalogs/{config.CATALOG_ID}/servingConfigs/{config.SERVING_CONFIG_ID}"
+search_placement = f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}/catalogs/{config.CATALOG_ID}/servingConfigs/{config.SERVING_CONFIG_ID}"
 
 # Initialize the Search Service Client
 search_client = SearchServiceClient()
 
 # Initialize the Product Service Client
 product_client = ProductServiceClient()
+
+# Initialize the Prediction Service Client
+prediction_client = PredictionServiceClient()
 
 
 @app.before_request
@@ -32,8 +46,47 @@ def initialize_cart():
 
 @app.route('/')
 def index():
-    """Homepage."""
-    return render_template('index.html')
+    """Homepage: Fetches and displays product recommendations."""
+    recommendations = []
+    error = None
+    try:
+        # The full resource name of the serving config
+        recommendation_placement = prediction_client.serving_config_path(
+            project=app.config["PROJECT_ID"],
+            location=app.config["LOCATION"],
+            catalog=app.config["CATALOG_ID"],
+            serving_config=app.config["RECOMMENDATION_SERVING_CONFIG_ID"],
+        )
+
+        # Create a user event object
+        user_event = UserEvent(
+            event_type="home-page-view",
+            visitor_id="test-visitor-id"  # In a real app, manage this with cookies
+        )
+
+        # Create the predict request
+        predict_request = PredictRequest(
+            placement=recommendation_placement,
+            user_event=user_event,
+            page_size=10,
+            params={"returnProduct": struct_pb2.Value(bool_value=True)}
+        )
+
+        # Get the prediction response
+        response = prediction_client.predict(request=predict_request)
+
+        # Process the results
+        for result in response.results:
+            if 'product' in result.metadata:
+                product_struct = result.metadata['product']
+                product_json = struct_pb2.Struct.to_json(product_struct)
+                recommendations.append(Product.from_json(product_json))
+
+    except (GoogleAPICallError, Exception) as e:
+        error = str(e)
+        print(f"Error getting recommendations: {e}")
+
+    return render_template('index.html', recommendations=recommendations, error=error)
 
 
 @app.route('/search')
@@ -47,7 +100,7 @@ def search():
 
     # --- Build Search Request ---
     search_request = SearchRequest(
-        placement=placement,
+        placement=search_placement,
         query=query,
         visitor_id="test-visitor-id",  # A unique ID for the user session
         page_size=20
