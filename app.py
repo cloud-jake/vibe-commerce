@@ -51,11 +51,9 @@ def index():
     error = None
     try:
         # The full resource name of the serving config
-        recommendation_placement = prediction_client.serving_config_path(
-            project=app.config["PROJECT_ID"],
-            location=app.config["LOCATION"],
-            catalog=app.config["CATALOG_ID"],
-            serving_config=app.config["RECOMMENDATION_SERVING_CONFIG_ID"],
+        recommendation_placement = (
+            f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}"
+            f"/catalogs/{config.CATALOG_ID}/servingConfigs/{config.RECOMMENDATION_SERVING_CONFIG_ID}"
         )
 
         # Create a user event object
