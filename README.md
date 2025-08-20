@@ -10,14 +10,13 @@ It showcases features like AI-driven product search, personalized recommendation
 - **Personalized Recommendations**: Displays a "Recommended For You" carousel on the homepage.
 - **Product Detail Pages**: Dynamically generated pages for each product.
 - **Shopping Cart**: A fully functional cart using Flask sessions.
-- **Real-time Event Tracking**: Captures user events (`home-page-view`, `search`, `detail-page-view`, `add-to-cart`, `purchase-complete`) and sends them directly to the Retail API for model training and personalization.
-- **Secure Configuration**: Uses environment variables to manage sensitive API keys, keeping them out of source control.
+- **Secure Server-Side Event Tracking**: Captures user events and forwards them to the Retail API via a secure backend endpoint, using service account credentials.
 
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
 
-- Python (3.10 or newer)
+- Python (3.12 is recommended to ensure library compatibility)
 - `pip` and `venv`
 - Google Cloud SDK
 
@@ -51,19 +50,7 @@ Follow these steps to get the application running locally.
     gcloud auth application-default login
     ```
 
-5.  **Configure Environment Variables:**
-    The application requires an API Key for real-time event tracking. This key should not be stored in source control.
-
-    - Create a new file named `.env` in the root of the project.
-    - Add your Retail API Key to this file.
-
-    ```
-    # .env
-    RETAIL_API_KEY="your-api-key-here"
-    ```
-    > **Important**: The `.gitignore` file is already configured to ignore the `.env` file, ensuring your key is not accidentally committed to GitHub.
-
-6.  **Update the Application Configuration:**
+5.  **Update the Application Configuration:**
     Open `config.py` and update the following variables with your specific Google Cloud project details:
     - `PROJECT_ID`
     - `LOCATION`

@@ -5,37 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Vibe Commerce{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-    <!-- Google Retail Events via v2_event.js -->
-    <script type="text/javascript">
-      const apiKey = '{{ api_key }}';
-      const projectId = '{{ project_id }}';
-      const locationId = '{{ location }}';
-      const catalogId = '{{ catalog_id }}';
-
-      if (apiKey) {
-        console.groupCollapsed("Retail Event Tracking Initialized");
-        console.log("API Key:", apiKey ? '******' + apiKey.slice(-4) : 'NOT FOUND'); // Obscure key for safety
-        console.log("Project ID:", projectId);
-        console.log("Location ID:", locationId);
-        console.log("Catalog ID:", catalogId);
-        console.groupEnd();
-
-        var _gre = _gre || [];
-        _gre.push(['apiKey', apiKey]);
-        _gre.push(['projectId', projectId]);
-        _gre.push(['locationId', locationId]);
-        _gre.push(['catalogId', catalogId]);
-    
-        (function() {
-          var gre = document.createElement('script'); gre.type = 'text/javascript'; gre.async = true;
-          gre.src = 'https://www.gstatic.com/retail/v2_event.js';
-          var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(gre, s);
-        })();
-      } else {
-        console.error("Retail API Key is missing. Event tracking is disabled.");
-      }
-    </script>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 </head>
 <body>
     <header>
@@ -63,15 +33,13 @@
         {% block content %}{% endblock %}
     </main>
 
-    {% if api_key %}
-        <script src="{{ url_for('static', filename='js/event_tracker.js') }}"></script>
-        <script>
-            // Initialize the event tracker with data from the server
-            VibeTracker.init({
-                visitorId: '{{ visitor_id }}'
-            });
-        </script>
-    {% endif %}
+    <script src="{{ url_for('static', filename='js/event_tracker.js') }}"></script>
+    <script>
+        // Initialize the event tracker with data from the server
+        VibeTracker.init({
+            visitorId: '{{ visitor_id }}'
+        });
+    </script>
     {% block scripts %}{% endblock %}
     <footer>
         <p>&copy; 2024 - Vibe Commerce Demo</p>

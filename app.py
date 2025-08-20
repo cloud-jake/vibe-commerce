@@ -1,17 +1,20 @@
 import os
 import json
+import traceback
 import uuid
 from flask import Flask, render_template, request, redirect, url_for, session
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.retail_v2 import (
     PredictionServiceClient,
     ProductServiceClient,
+    UserEventServiceClient,
     SearchServiceClient,
 )
 from google.cloud.retail_v2.types import (
     PredictRequest,
     Product,
     SearchResponse,
+    WriteUserEventRequest,
     SearchRequest,
     UserEvent,
 )
@@ -26,7 +29,12 @@ app.secret_key = os.urandom(24)
 # --- Vertex AI Search Client Initialization ---
 
 # Placement for search results
-search_placement = f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}/catalogs/{config.CATALOG_ID}/servingConfigs/{config.SERVING_CONFIG_ID}"
+search_placement = SearchServiceClient.serving_config_path(
+    project=config.PROJECT_ID,
+    location=config.LOCATION,
+    catalog=config.CATALOG_ID,
+    serving_config=config.SERVING_CONFIG_ID,
+)
 
 # Initialize the Search Service Client
 search_client = SearchServiceClient()
@@ -37,6 +45,9 @@ product_client = ProductServiceClient()
 # Initialize the Prediction Service Client
 prediction_client = PredictionServiceClient()
 
+# Initialize the User Event Service Client
+user_event_client = UserEventServiceClient()
+
 @app.context_processor
 def inject_shared_variables():
     """Injects variables needed in all templates for event tracking."""
@@ -44,8 +55,7 @@ def inject_shared_variables():
         project_id=config.PROJECT_ID,
         catalog_id=config.CATALOG_ID,
         location=config.LOCATION,
-        visitor_id=session.get('visitor_id'),
-        api_key=config.API_KEY
+        visitor_id=session.get('visitor_id')
     )
 
 
@@ -97,7 +107,7 @@ def index():
 
     except (GoogleAPICallError, Exception) as e:
         error = str(e)
-        print(f"Error getting recommendations: {e}")
+        print(f"Error getting recommendations: {e}\n{traceback.format_exc()}")
 
     return render_template('index.html', recommendations=recommendations, error=error)
 
@@ -116,7 +126,7 @@ def search():
         placement=search_placement,
         query=query,
         visitor_id=session.get('visitor_id'),  # A unique ID for the user session
-        page_size=20
+        page_size=20,
     )
 
     # --- Call the Retail API ---
@@ -132,7 +142,7 @@ def search():
             query=query
         )
     except Exception as e:
-        print(f"Error during search: {e}")
+        print(f"Error during search: {e}\n{traceback.format_exc()}")
         return render_template('search_results.html', error=str(e), query=query)
 
 
@@ -141,7 +151,13 @@ def product_detail(product_id):
     """
     Fetches and displays the details for a single product.
     """
-    product_name = f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}/catalogs/{config.CATALOG_ID}/branches/0/products/{product_id}"
+    product_name = product_client.product_path(
+        project=config.PROJECT_ID,
+        location=config.LOCATION,
+        catalog=config.CATALOG_ID,
+        branch="0", # The default branch is '0'
+        product=product_id
+    )
 
     try:
         product_proto = product_client.get_product(name=product_name)
@@ -153,8 +169,45 @@ def product_detail(product_id):
             product_json=product_dict
         )
     except Exception as e:
-        print(f"Error fetching product details: {e}")
+        print(f"Error fetching product details: {e}\n{traceback.format_exc()}")
         return render_template('product_detail.html', error=str(e))
+
+
+@app.route('/api/track_event', methods=['POST'])
+def track_event():
+    """
+    Receives a user event from the client and writes it to the Retail API.
+    This provides a secure, server-side event ingestion mechanism.
+    """
+    event_data = request.get_json()
+    if not event_data:
+        return {"error": "Invalid JSON payload"}, 400
+
+    try:
+        # The parent catalog resource name
+        parent = user_event_client.catalog_path(
+            project=config.PROJECT_ID,
+            location=config.LOCATION,
+            catalog=config.CATALOG_ID
+        )
+
+        # Handle both a single event object and an array of events (from sendBeacon)
+        events_to_process = event_data if isinstance(event_data, list) else [event_data]
+
+        for event in events_to_process:
+            # Construct the UserEvent object from the client-side payload
+            user_event = UserEvent.from_json(json.dumps(event))
+
+            # Write the event
+            write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
+            user_event_client.write_user_event(request=write_request)
+
+            print(f"Successfully wrote event: {user_event.event_type} for visitor {user_event.visitor_id}")
+
+        return {"status": "success"}, 200
+    except Exception as e:
+        print(f"Error writing user event: {e}\n{traceback.format_exc()}")
+        return {"error": "Failed to write event"}, 500
 
 
 @app.route('/add_to_cart', methods=['POST'])
@@ -219,7 +272,7 @@ def remove_from_cart(product_id):
 @app.route('/checkout', methods=['POST'])
 def checkout():
     """Simulates checkout and redirects to a confirmation page."""
-    cart_at_checkout = list(session.get('cart', []))
+    cart_at_checkout = list(session.get('cart', {}).values())
     total_at_checkout = session.get('cart_total', 0.0)
     transaction_id = str(uuid.uuid4())
 
@@ -231,7 +284,7 @@ def checkout():
     }
 
     # Clear the cart
-    session['cart'] = []
+    session['cart'] = {}
     session['cart_total'] = 0.0
 
     return redirect(url_for('purchase_confirmation'))

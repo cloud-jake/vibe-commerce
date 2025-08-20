@@ -1,47 +1,58 @@
 /**
  * Vibe Commerce Event Tracker
  *
- * This script provides helper functions to send user events to the
- * Google Cloud Retail API via v2_event.js.
+ * This script provides helper functions to send user events to a secure
+ * backend endpoint, which then forwards them to the Google Cloud Retail API.
  */
 
 const VibeTracker = {
   _eventQueue: [],
-  _isGreReady: false,
-  _checkInterval: null,
+  _isSending: false,
 
   init(config) {
     this.visitorId = config.visitorId;
-    console.log('Real-time Event Tracker Initialized for visitor:', this.visitorId);
-    this._startGreCheck();
-  },
+    console.log('Server-side Event Tracker Initialized for visitor:', this.visitorId);
 
-  _startGreCheck() {
-    this._checkInterval = setInterval(() => {
-      // The sign that v2_event.js is ready is that _gre is no longer a simple array.
-      if (typeof _gre !== 'undefined' && !Array.isArray(_gre)) {
-        this._isGreReady = true;
-        console.log("Google Retail Event library is ready. Processing queue.");
-        this._flushQueue();
-        clearInterval(this._checkInterval);
+    // Add a listener to flush the queue when the user navigates away.
+    // This uses navigator.sendBeacon for a more reliable delivery.
+    window.addEventListener('beforeunload', () => {
+      if (this._eventQueue.length > 0) {
+        console.log(`Sending ${this._eventQueue.length} remaining events via sendBeacon.`);
+        const payload = this._eventQueue.map(event => ({...event, visitorId: this.visitorId}));
+        // Note: sendBeacon sends all events in one go.
+        // For a high-traffic site, you might send them individually or in batches.
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        navigator.sendBeacon('/api/track_event', blob);
       }
-    }, 100); // Check every 100ms
-
-    // Failsafe: stop checking after a few seconds to prevent an infinite loop
-    setTimeout(() => {
-      if (!this._isGreReady) {
-        console.error("Google Retail Event library did not initialize after 5 seconds. Events will not be sent.");
-        clearInterval(this._checkInterval);
-      }
-    }, 5000);
+    });
   },
 
   _flushQueue() {
-    while (this._eventQueue.length > 0) {
-      const eventData = this._eventQueue.shift();
-      console.log("Flushing event from queue:", eventData);
-      _gre.push(['logEvent', eventData]);
+    if (this._isSending || this._eventQueue.length === 0) {
+      return;
     }
+    this._isSending = true;
+    const eventData = this._eventQueue.shift();
+
+    fetch('/api/track_event', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(eventData),
+    })
+    .then(response => {
+      if (!response.ok) {
+        console.error('Failed to track event:', eventData, response);
+      }
+    })
+    .catch(error => {
+      console.error('Error sending event to backend:', error);
+    })
+    .finally(() => {
+      this._isSending = false;
+      this._flushQueue(); // Process next item in queue
+    });
   },
 
   /**
@@ -50,13 +61,9 @@ const VibeTracker = {
    */
   _logEvent(eventData) {
     const payload = { ...eventData, visitorId: this.visitorId };
-    if (this._isGreReady) {
-      console.log("Logging event directly:", payload);
-      _gre.push(['logEvent', payload]);
-    } else {
-      console.log("Queuing event:", payload);
-      this._eventQueue.push(payload);
-    }
+    console.log("Queuing event:", payload);
+    this._eventQueue.push(payload);
+    this._flushQueue();
   },
 
   /**
