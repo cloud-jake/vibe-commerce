@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 from flask import Flask, render_template, request, redirect, url_for, session
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.retail_v2 import (
@@ -35,13 +36,24 @@ product_client = ProductServiceClient()
 # Initialize the Prediction Service Client
 prediction_client = PredictionServiceClient()
 
+@app.context_processor
+def inject_shared_variables():
+    """Injects variables needed in all templates for event tracking."""
+    return dict(
+        project_id=config.PROJECT_ID,
+        catalog_id=config.CATALOG_ID,
+        visitor_id=session.get('visitor_id')
+    )
+
 
 @app.before_request
-def initialize_cart():
-    """Initialize the cart in the session if it doesn't exist."""
+def initialize_session():
+    """Initialize the cart and visitor ID in the session if they don't exist."""
     if 'cart' not in session:
         session['cart'] = []
         session['cart_total'] = 0.0
+    if 'visitor_id' not in session:
+        session['visitor_id'] = str(uuid.uuid4())
 
 
 @app.route('/')
@@ -59,7 +71,7 @@ def index():
         # Create a user event object
         user_event = UserEvent(
             event_type="home-page-view",
-            visitor_id="test-visitor-id"  # In a real app, manage this with cookies
+            visitor_id=session.get('visitor_id')
         )
 
         # Create the predict request
@@ -100,7 +112,7 @@ def search():
     search_request = SearchRequest(
         placement=search_placement,
         query=query,
-        visitor_id="test-visitor-id",  # A unique ID for the user session
+        visitor_id=session.get('visitor_id'),  # A unique ID for the user session
         page_size=20
     )
 
@@ -174,8 +186,52 @@ def add_to_cart():
 @app.route('/cart')
 def view_cart():
     """Displays the shopping cart."""
-    return render_template('cart.html')
+    return render_template('cart.html', cart=session.get('cart', []), total=session.get('cart_total', 0.0))
 
+
+@app.route('/remove_from_cart/<product_id>', methods=['POST'])
+def remove_from_cart(product_id):
+    """Removes an item from the cart."""
+    current_cart = session.get('cart', [])
+    # Create a new cart excluding the item to be removed
+    new_cart = [item for item in current_cart if item['id'] != product_id]
+    session['cart'] = new_cart
+    # Recalculate total
+    session['cart_total'] = sum(item['price'] * item['quantity'] for item in new_cart)
+    return redirect(url_for('view_cart'))
+
+
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    """Simulates checkout and redirects to a confirmation page."""
+    cart_at_checkout = list(session.get('cart', []))
+    total_at_checkout = session.get('cart_total', 0.0)
+    transaction_id = str(uuid.uuid4())
+
+    # Store checkout details in session to pass to the confirmation page
+    session['last_order'] = {
+        'items': cart_at_checkout,
+        'total': total_at_checkout,
+        'transaction_id': transaction_id
+    }
+
+    # Clear the cart
+    session['cart'] = []
+    session['cart_total'] = 0.0
+
+    return redirect(url_for('purchase_confirmation'))
+
+
+@app.route('/purchase_confirmation')
+def purchase_confirmation():
+    """Displays the purchase confirmation page and tracks the purchase event."""
+    last_order = session.get('last_order')
+    if not last_order:
+        return redirect(url_for('index'))
+
+    # Clear the last order from session after displaying it
+    session.pop('last_order', None)
+    return render_template('purchase_confirmation.html', order=last_order)
 
 if __name__ == '__main__':
     # Ensure you have set up your Google Cloud credentials.

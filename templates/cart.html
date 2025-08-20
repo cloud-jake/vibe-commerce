@@ -5,25 +5,42 @@
 {% block content %}
     <h2>Your Shopping Cart</h2>
 
-    {% if not session.cart %}
+    {% if not cart %}
         <p>Your cart is empty.</p>
+        <a href="{{ url_for('index') }}">Continue Shopping</a>
     {% else %}
-        <div class="cart-items">
-            {% for item in session.cart %}
-            <div class="cart-item">
-                <img src="{{ item.image or 'https://via.placeholder.com/100' }}" alt="{{ item.title }}">
-                <div class="item-details">
-                    <h3>{{ item.title }}</h3>
-                    <p>Quantity: {{ item.quantity }}</p>
+        <div class="cart-container">
+            <div class="cart-items">
+                {% for item in cart %}
+                <div class="cart-item">
+                    <img src="{{ item.image or 'https://via.placeholder.com/100' }}" alt="{{ item.title }}">
+                    <div class="cart-item-info">
+                        <h3>{{ item.title }}</h3>
+                        <p>Quantity: {{ item.quantity }}</p>
+                        <p>Price: ${{ "%.2f"|format(item.price) }}</p>
+                    </div>
+                    <div class="cart-item-actions">
+                        <form action="{{ url_for('remove_from_cart', product_id=item.id) }}" method="post" onsubmit="VibeTracker.trackRemoveFromCart({{ item|tojson|safe }})">
+                            <button type="submit" class="remove-button">Remove</button>
+                        </form>
+                    </div>
                 </div>
-                <div class="item-price">
-                    <p>${{ "%.2f"|format(item.price * item.quantity) }}</p>
-                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
-        <div class="cart-total">
-            <h3>Total: ${{ "%.2f"|format(session.cart_total) }}</h3>
+            <div class="cart-summary">
+                <h3>Order Summary</h3>
+                <p>Total: <strong>${{ "%.2f"|format(total) }}</strong></p>
+                <form action="{{ url_for('checkout') }}" method="post">
+                    <button type="submit" class="checkout-button">Proceed to Checkout</button>
+                </form>
+            </div>
         </div>
     {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const cartItems = {{ cart|tojson|safe }};
+    VibeTracker.trackShoppingCartView(cartItems);
+</script>
 {% endblock %}

@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Vibe Commerce{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- Google tag (gtag.js) for Retail Events -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      // IMPORTANT: You must replace G-XXXXXXXXXX with your own Google Analytics Measurement ID.
+      // This is only a placeholder.
+      // The retail event data will be sent to the project_id and catalog_id specified below.
+      gtag('config', 'G-XXXXXXXXXX', {
+          'send_page_view': false, // We will send events manually
+          'retail_catalog_id': '{{ catalog_id }}',
+          'retail_project_id': '{{ project_id }}'
+      });
+    </script>
 </head>
 <body>
     <header>
@@ -32,6 +49,16 @@
         {% block content %}{% endblock %}
     </main>
 
+    <script src="{{ url_for('static', filename='js/event_tracker.js') }}"></script>
+    <script>
+        // Initialize the event tracker with data from the server
+        VibeTracker.init({
+            visitorId: '{{ visitor_id }}',
+            catalogId: '{{ catalog_id }}',
+            projectId: '{{ project_id }}'
+        });
+    </script>
+    {% block scripts %}{% endblock %}
     <footer>
         <p>&copy; 2024 - Vibe Commerce Demo</p>
     </footer>
