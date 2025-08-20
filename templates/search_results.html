@@ -14,7 +14,7 @@
                 <div class="product-card">
                     <a href="{{ url_for('product_detail', product_id=result.product.id) }}">
                         <img src="{{ result.product.uri or 'https://via.placeholder.com/200' }}" alt="{{ result.product.title }}">
-                        <h3>{{ result.product.title }}</h3>
+                        <h3 class="product-title">{{ result.product.title or "Untitled Product" }}</h3>
                         <p class="price">${{ "%.2f"|format(result.product.price_info.price) }}</p>
                     </a>
                 </div>
