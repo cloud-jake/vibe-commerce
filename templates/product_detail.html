@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.title or "Product Details" }}{% endblock %}
+
+{% block content %}
+    {% if error %}
+        <p class="error">An error occurred: {{ error }}</p>
+        <p>Could not retrieve product details. Please check the product ID and your configuration.</p>
+    {% elif product %}
+        <div class="product-detail-container">
+            <div class="product-image">
+                <img src="{{ product.uri or 'https://via.placeholder.com/400' }}" alt="{{ product.title }}">
+            </div>
+            <div class="product-info">
+                <h1>{{ product.title }}</h1>
+                <p class="product-id">Product ID: {{ product.id }}</p>
+                <p class="product-price">${{ "%.2f"|format(product.price_info.price) }}</p>
+                <div class="product-description">
+                    {{ product.description | safe }}
+                </div>
+
+                <form action="{{ url_for('add_to_cart') }}" method="post" class="add-to-cart-form">
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <input type="hidden" name="product_title" value="{{ product.title }}">
+                    <input type="hidden" name="product_price" value="{{ product.price_info.price }}">
+                    <input type="hidden" name="product_image" value="{{ product.uri }}">
+                    <button type="submit">Add to Cart</button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
