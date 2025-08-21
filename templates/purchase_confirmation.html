@@ -12,13 +12,9 @@
     </div>
 
     <h3>Order Details</h3>
-    {% for item in order.items %}
+    {# Use bracket notation `order['items']` to avoid conflict with the
+       dictionary's built-in `.items()` method. #}
+    {% for item in order['items'] %}
         <p>{{ item.title }} (x{{ item.quantity }})</p>
     {% endfor %}
-{% endblock %}
-
-{% block scripts %}
-<script>
-    VibeTracker.trackPurchaseComplete({{ order|tojson|safe }});
-</script>
 {% endblock %}

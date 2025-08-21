@@ -1,0 +1,48 @@
+{#
+    This template renders the facet sidebar for search results.
+    It displays currently applied filters and available facet options.
+#}
+
+<div class="applied-filters">
+    <h4>Applied Filters</h4>
+    {% if selected_facets %}
+        <ul>
+        {% for key, values in selected_facets.items() %}
+            {% for value in values %}
+                <li class="applied-filter-tag">
+                    {{ value }}
+                    {# Logic to create a URL to remove this specific facet value #}
+                    {% set new_args = request.args.to_dict(flat=False) %}
+                    {% set _ = new_args[key].remove(value) %}
+                    {# If the key has no more values, remove the key itself #}
+                    {% if not new_args[key] %}{% set _ = new_args.pop(key) %}{% endif %}
+                    <a href="{{ url_for('search', **new_args) }}" class="remove-facet-link" title="Remove filter">&times;</a>
+                </li>
+            {% endfor %}
+        {% endfor %}
+        </ul>
+        <a href="{{ url_for('search', query=query, expand=request.args.get('expand')) }}" class="clear-all-filters">Clear All</a>
+    {% else %}
+        <p>None</p>
+    {% endif %}
+</div>
+
+<hr>
+
+<div class="available-facets">
+    <h4>Refine By</h4>
+    {# Loop through facets, but only those that have values to display. #}
+    {% for facet in facets if facet.facet_values %}
+        <div class="facet-group">
+            <h5>{{ facet.display_name }}</h5>
+            <ul>
+                {% for val in facet.facet_values %}
+                    <li class="facet-item"><a href="{{ request.path }}?{{ request.query_string }}&{{ facet.key }}={{ val.value|urlencode }}">{{ val.value }} ({{ val.count }})</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        {# This block renders if the 'facets' list is empty or no facets have values. #}
+        <p>No filters available for this search.</p>
+    {% endfor %}
+</div>

@@ -1,5 +1,6 @@
 import os
 import json
+import math
 import traceback
 import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
@@ -20,6 +21,7 @@ from google.cloud.retail_v2.types import (
     SearchRequest,
     UserEvent,
 )
+from google.protobuf import json_format
 from google.protobuf import struct_pb2
 
 import config
@@ -106,8 +108,10 @@ def index():
         # Process the results
         for result in response.results:
             if 'product' in result.metadata:
-                product_struct = result.metadata['product']
-                product_json = struct_pb2.Struct.to_json(product_struct)
+                # The 'product' in metadata is a Struct contained within a Value.
+                # We convert the Struct to a JSON string, then parse it into a Product object.
+                product_struct = result.metadata['product'].struct_value
+                product_json = json_format.MessageToJson(product_struct)
                 recommendations.append(Product.from_json(product_json))
 
     except (GoogleAPICallError, Exception) as e:
@@ -123,9 +127,38 @@ def search():
     Performs a search using the Vertex AI Search for Commerce Retail API.
     """
     query = request.args.get('query', '').strip()
+    try:
+        page = int(request.args.get('page', 1))
+    except (ValueError, TypeError):
+        page = 1
+    if page < 1:
+        page = 1
+
+    page_size = 20
+    offset = (page - 1) * page_size
+
     # Add server-side validation to match the client-side minlength attribute
     if len(query) < 2:
         return redirect(url_for('index'))
+
+    # --- Handle Facets ---
+    facet_filters = []
+    selected_facets = {}
+    # Use a set to avoid reprocessing keys when using getlist
+    processed_keys = {'query', 'expand', 'page'}
+
+    for key in request.args:
+        if key not in processed_keys:
+            values = request.args.getlist(key)
+            selected_facets[key] = values
+            # The API filter syntax is 'key: ANY("value1", "value2")'
+            filter_values = ', '.join([f'"{v}"' for v in values])
+            facet_filters.append(f'{key}: ANY({filter_values})')
+            processed_keys.add(key)
+
+    # Combine all facet filters with AND
+    search_filter = " AND ".join(facet_filters) if facet_filters else ""
+
 
     # Check for a URL parameter to control query expansion. Default to True.
     use_expansion = request.args.get('expand', 'true').lower() == 'true'
@@ -145,17 +178,29 @@ def search():
             condition=SearchRequest.QueryExpansionSpec.Condition.DISABLED
         )
 
+    # Enable dynamic faceting
+    dynamic_facet_spec = SearchRequest.DynamicFacetSpec(
+        mode=SearchRequest.DynamicFacetSpec.Mode.ENABLED
+    )
+
     search_request = SearchRequest(
         placement=search_placement,
         query=query,
-        visitor_id=session.get('visitor_id'),  # A unique ID for the user session
-        page_size=20,
+        visitor_id=session.get('visitor_id'),
+        page_size=page_size,
+        offset=offset,
         query_expansion_spec=query_expansion_spec,
+        dynamic_facet_spec=dynamic_facet_spec,
+        filter=search_filter,
     )
 
     # --- Call the Retail API ---
     try:
         search_response = search_client.search(search_request)
+
+        total_pages = 0
+        if search_response.total_size > 0:
+            total_pages = int(math.ceil(search_response.total_size / page_size))
 
         # The search_response.results is a list of proto messages, not directly
         # JSON serializable. Convert them to dicts for the event tracker.
@@ -163,14 +208,19 @@ def search():
         return render_template(
             'search_results.html',
             results=search_response.results,
+            facets=search_response.facets,
+            selected_facets=selected_facets,
             results_json=results_for_js,
             query=query,
             use_expansion=use_expansion,
-            event_type='search'
+            event_type='search',
+            current_page=page,
+            total_pages=total_pages,
+            total_results=search_response.total_size
         )
     except Exception as e:
         print(f"Error during search: {e}\n{traceback.format_exc()}")
-        return render_template('search_results.html', error=str(e), query=query, use_expansion=use_expansion, event_type='search')
+        return render_template('search_results.html', error=str(e), query=query, use_expansion=use_expansion, event_type='search', facets=[], selected_facets={}, current_page=1, total_pages=0, total_results=0)
 
 
 @app.route('/product/<string:product_id>')
@@ -333,10 +383,49 @@ def remove_from_cart(product_id):
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
-    """Simulates checkout and redirects to a confirmation page."""
+    """Simulates checkout, tracks the purchase event, and redirects to a confirmation page."""
     cart_at_checkout = list(session.get('cart', {}).values())
     total_at_checkout = session.get('cart_total', 0.0)
     transaction_id = str(uuid.uuid4())
+    visitor_id = session.get('visitor_id')
+
+    # --- Track Purchase Event on Server-Side for Reliability ---
+    if cart_at_checkout: # Only track if there was something in the cart
+        try:
+            parent = user_event_client.catalog_path(
+                project=config.PROJECT_ID,
+                location=config.LOCATION,
+                catalog=config.CATALOG_ID
+            )
+
+            product_details = [
+                {
+                    "product": {"id": item['id']},
+                    "quantity": item['quantity']
+                }
+                for item in cart_at_checkout
+            ]
+
+            purchase_transaction = {
+                "id": transaction_id,
+                "revenue": total_at_checkout,
+                "currencyCode": "USD" # Assuming USD
+            }
+
+            user_event_payload = {
+                "eventType": "purchase-complete",
+                "visitorId": visitor_id,
+                "productDetails": product_details,
+                "purchaseTransaction": purchase_transaction
+            }
+
+            user_event = UserEvent.from_json(json.dumps(user_event_payload))
+            write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
+            user_event_client.write_user_event(request=write_request)
+            print(f"Successfully wrote server-side event: purchase-complete for visitor {visitor_id}")
+        except Exception as e:
+            # Log the error but don't block the user from completing the purchase
+            print(f"Error writing server-side purchase event: {e}\n{traceback.format_exc()}")
 
     # Store checkout details in session to pass to the confirmation page
     session['last_order'] = {
@@ -354,12 +443,12 @@ def checkout():
 
 @app.route('/purchase_confirmation')
 def purchase_confirmation():
-    """Displays the purchase confirmation page and tracks the purchase event."""
+    """Displays the purchase confirmation page."""
     last_order = session.get('last_order')
     if not last_order:
         return redirect(url_for('index'))
 
-    # Clear the last order from session after displaying it
+    # Clear the last order from session after displaying it to prevent re-submission on refresh.
     session.pop('last_order', None)
     return render_template('purchase_confirmation.html', order=last_order, event_type='purchase-complete')
 

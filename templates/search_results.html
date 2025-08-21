@@ -5,28 +5,42 @@
 {% block content %}
     <h2>Search Results for "{{ query }}"</h2>
 
-    {% if error %}
-        <p class="error">An error occurred: {{ error }}</p>
-        <p>Please ensure your `config.py` is correct and you have imported product data into your catalog.</p>
-    {% elif results %}
-        <div class="product-grid">
-            {% for result in results %}
-                <div class="product-card">
-                    <a href="{{ url_for('product_detail', product_id=result.product.id) }}">
-                        <img src="{{ (result.product.images[0].uri if result.product.images) or 'https://via.placeholder.com/200' }}" alt="{{ result.product.title or 'Untitled Product' }}">
-                        <h3 class="product-title">{{ result.product.title or "Untitled Product" }}</h3>
-                        {% if result.product.price_info and result.product.price_info.currency_code %}
-                            <p class="price">${{ "%.2f"|format(result.product.price_info.price) }}</p>
-                        {% else %}
-                            <p class="price price-unavailable">Price not available</p>
-                        {% endif %}
-                    </a>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p>No products found for your query.</p>
+    {% if total_results is defined and total_results > 0 %}
+        <p class="search-summary">{{ total_results }} products found.</p>
     {% endif %}
+
+    <div class="search-results-container">
+        <aside class="facet-sidebar">
+            {% include '_facet_sidebar.html' %}
+        </aside>
+
+        <div class="search-results-grid">
+            {% if error %}
+                <p class="error">An error occurred: {{ error }}</p>
+                <p>Please ensure your `config.py` is correct and you have imported product data into your catalog.</p>
+            {% elif results %}
+                <div class="product-grid">
+                    {% for result in results %}
+                        <div class="product-card">
+                            <a href="{{ url_for('product_detail', product_id=result.product.id) }}">
+                                <img src="https://prd.place/400?id={{ loop.index % 100 + 1 }}" alt="{{ result.product.title or 'Untitled Product' }}">
+                                <h3 class="product-title">{{ result.product.title or "Untitled Product" }}</h3>
+                                <p class="product-id-debug">ID: {{ result.product.id }}</p>
+                                {% if result.product.price_info and result.product.price_info.currency_code %}
+                                    <p class="price">${{ "%.2f"|format(result.product.price_info.price) }}</p>
+                                {% else %}
+                                    <p class="price price-unavailable">Price not available</p>
+                                {% endif %}
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% include '_pagination.html' %}
+            {% else %}
+                <p>No products found for your query.</p>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
