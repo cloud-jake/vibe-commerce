@@ -123,11 +123,20 @@ def search():
         return redirect(url_for('index'))
 
     # --- Build Search Request ---
+    # Enable query expansion to broaden the search for better results.
+    # Pinning unexpanded results ensures that items matching the original
+    # query are ranked higher.
+    query_expansion_spec = SearchRequest.QueryExpansionSpec(
+        condition=SearchRequest.QueryExpansionSpec.Condition.AUTO,
+        pin_unexpanded_results=True
+    )
+
     search_request = SearchRequest(
         placement=search_placement,
         query=query,
         visitor_id=session.get('visitor_id'),  # A unique ID for the user session
         page_size=20,
+        query_expansion_spec=query_expansion_spec,
     )
 
     # --- Call the Retail API ---
