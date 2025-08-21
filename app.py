@@ -151,12 +151,36 @@ def search():
     # --- Call the Retail API ---
     try:
         search_response = search_client.search(search_request)
+
+        # --- WORKAROUND to fetch full product data for search results ---
+        # This is needed if 'priceInfo' is not marked as 'retrievable' in your
+        # catalog's attribute controls in the Google Cloud Console.
+        # WARNING: This is inefficient as it makes an additional API call for each
+        # search result and will slow down the page load. The recommended fix
+        # is to update the attribute settings in the Cloud Console.
+        hydrated_results = []
+        for result in search_response.results:
+            # The product object in a search result is a snippet.
+            # If it doesn't contain price_info, we fetch the full product.
+            if not result.product.price_info.price:
+                try:
+                    # Use the top-level 'id' from the SearchResult, which is more reliable than result.product.id.
+                    full_product_name = product_client.product_path(
+                        project=config.PROJECT_ID, location=config.LOCATION,
+                        catalog=config.CATALOG_ID, branch="0", product=result.id
+                    )
+                    # Replace the snippet with the full product data
+                    result.product = product_client.get_product(name=full_product_name)
+                except Exception as e_hydrate:
+                    print(f"Could not hydrate product {result.id}: {e_hydrate}")
+            hydrated_results.append(result)
+
         # The search_response.results is a list of proto messages, not directly
         # JSON serializable. Convert them to dicts for the event tracker.
-        results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
+        results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in hydrated_results]
         return render_template(
             'search_results.html',
-            results=search_response.results,
+            results=hydrated_results,
             results_json=results_for_js,
             query=query,
             use_expansion=use_expansion,
