@@ -2,15 +2,17 @@ import os
 import json
 import traceback
 import uuid
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.retail_v2 import (
     PredictionServiceClient,
     ProductServiceClient,
     UserEventServiceClient,
     SearchServiceClient,
+    CompletionServiceClient,
 )
 from google.cloud.retail_v2.types import (
+    CompleteQueryRequest,
     PredictRequest,
     Product,
     SearchResponse,
@@ -38,6 +40,9 @@ search_placement = SearchServiceClient.serving_config_path(
 
 # Initialize the Search Service Client
 search_client = SearchServiceClient()
+
+# Initialize the Completion Service Client for autocomplete
+completion_client = CompletionServiceClient()
 
 # Initialize the Product Service Client
 product_client = ProductServiceClient()
@@ -152,35 +157,12 @@ def search():
     try:
         search_response = search_client.search(search_request)
 
-        # --- WORKAROUND to fetch full product data for search results ---
-        # This is needed if 'priceInfo' is not marked as 'retrievable' in your
-        # catalog's attribute controls in the Google Cloud Console.
-        # WARNING: This is inefficient as it makes an additional API call for each
-        # search result and will slow down the page load. The recommended fix
-        # is to update the attribute settings in the Cloud Console.
-        hydrated_results = []
-        for result in search_response.results:
-            # The product object in a search result is a snippet.
-            # If it doesn't contain price_info, we fetch the full product.
-            if not result.product.price_info.price:
-                try:
-                    # Use the top-level 'id' from the SearchResult, which is more reliable than result.product.id.
-                    full_product_name = product_client.product_path(
-                        project=config.PROJECT_ID, location=config.LOCATION,
-                        catalog=config.CATALOG_ID, branch="0", product=result.id
-                    )
-                    # Replace the snippet with the full product data
-                    result.product = product_client.get_product(name=full_product_name)
-                except Exception as e_hydrate:
-                    print(f"Could not hydrate product {result.id}: {e_hydrate}")
-            hydrated_results.append(result)
-
         # The search_response.results is a list of proto messages, not directly
         # JSON serializable. Convert them to dicts for the event tracker.
-        results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in hydrated_results]
+        results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
         return render_template(
             'search_results.html',
-            results=hydrated_results,
+            results=search_response.results,
             results_json=results_for_js,
             query=query,
             use_expansion=use_expansion,
@@ -217,6 +199,40 @@ def product_detail(product_id):
     except Exception as e:
         print(f"Error fetching product details: {e}\n{traceback.format_exc()}")
         return render_template('product_detail.html', error=str(e))
+
+
+@app.route('/api/autocomplete')
+def autocomplete():
+    """Provides search suggestions based on the user's partial query."""
+    query = request.args.get('query', '').strip()
+    if not query:
+        return jsonify([])
+
+    # The SearchServiceClient does not have a 'catalog_path' helper.
+    # We can use the product_client or user_event_client to build the path.
+    catalog_path = user_event_client.catalog_path(
+        project=config.PROJECT_ID,
+        location=config.LOCATION,
+        catalog=config.CATALOG_ID
+    )
+
+    complete_query_request = CompleteQueryRequest(
+        catalog=catalog_path,
+        query=query,
+        visitor_id=session.get('visitor_id'),
+        # By default, the API will use a dataset generated from user events.
+    )
+
+    try:
+        response = completion_client.complete_query(request=complete_query_request)
+        # Extract just the suggestion text from the response
+        suggestions = [result.suggestion for result in response.completion_results]
+        # Add a log to see what the API is returning in the backend console
+        print(f"Autocomplete suggestions for '{query}': {suggestions}")
+        return jsonify(suggestions)
+    except Exception as e:
+        print(f"Error during autocomplete: {e}")
+        return jsonify([]) # Return empty list on error to prevent frontend issues
 
 
 @app.route('/api/track_event', methods=['POST'])

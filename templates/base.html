@@ -45,6 +45,58 @@
         });
     </script>
     {% block scripts %}{% endblock %}
+    <script>
+        // --- Autocomplete Logic ---
+        const searchInput = document.querySelector('.search-bar input[name="query"]');
+        const searchForm = searchInput.form;
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'autocomplete-suggestions';
+        searchForm.appendChild(suggestionsContainer);
+
+        let debounceTimer;
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearTimeout(debounceTimer);
+
+            if (query.length < 2) { // Don't search for very short strings
+                suggestionsContainer.innerHTML = '';
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(suggestions => {
+                        suggestionsContainer.innerHTML = '';
+                        if (suggestions.length > 0) {
+                            suggestions.forEach(suggestion => {
+                                const item = document.createElement('div');
+                                item.className = 'suggestion-item';
+                                item.textContent = suggestion;
+                                item.addEventListener('click', () => {
+                                    searchInput.value = suggestion;
+                                    suggestionsContainer.style.display = 'none';
+                                    searchForm.submit();
+                                });
+                                suggestionsContainer.appendChild(item);
+                            });
+                            suggestionsContainer.style.display = 'block';
+                        } else {
+                            suggestionsContainer.style.display = 'none';
+                        }
+                    }).catch(err => console.error('Autocomplete fetch error:', err));
+            }, 300); // 300ms debounce delay to avoid excessive API calls
+        });
+
+        // Hide suggestions when clicking outside the search bar
+        document.addEventListener('click', (e) => {
+            if (!searchForm.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+    </script>
     <footer>
         <div class="footer-content">
             <p>&copy; 2025 - Vibe Commerce Demo</p>

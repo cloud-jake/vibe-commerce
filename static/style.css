@@ -58,6 +58,7 @@ header .search-bar {
 
 header .search-bar form {
     display: flex;
+    position: relative; /* For positioning the autocomplete suggestions */
 }
 
 header .search-bar input[type="search"] {
@@ -182,6 +183,30 @@ main {
     font-style: italic;
     font-size: 1em;
 }
+
+/* Autocomplete Suggestions */
+.autocomplete-suggestions {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 100%; /* Position it right below the input */
+    left: 0;
+    right: 0;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 0 0 5px 5px;
+}
+
+.suggestion-item {
+    padding: 10px;
+    cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background-color: var(--background-color);}
 
 /* Hero Section */
 .hero {
