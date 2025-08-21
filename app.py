@@ -117,8 +117,9 @@ def search():
     """
     Performs a search using the Vertex AI Search for Commerce Retail API.
     """
-    query = request.args.get('query', '')
-    if not query:
+    query = request.args.get('query', '').strip()
+    # Add server-side validation to match the client-side minlength attribute
+    if len(query) < 2:
         return redirect(url_for('index'))
 
     # --- Build Search Request ---

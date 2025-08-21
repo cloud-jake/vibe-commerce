@@ -24,12 +24,12 @@
                 </div>
 
                 {% if product.price_info and product.price_info.currency_code %}
-                    <form action="{{ url_for('add_to_cart') }}" method="post" class="add-to-cart-form">
+                    <form action="{{ url_for('add_to_cart') }}" method="post" class="add-to-cart-form" onsubmit="VibeTracker.trackAddToCart({{ product_json|tojson|safe }})">
                         <input type="hidden" name="product_id" value="{{ product.id }}">
                         <input type="hidden" name="product_title" value="{{ product.title or 'Untitled Product' }}">
                         <input type="hidden" name="product_price" value="{{ product.price_info.price }}">
                         <input type="hidden" name="product_image" value="{{ (product.images[0].uri if product.images) or '' }}">
-                        <button type="submit" onclick="VibeTracker.trackAddToCart({{ product_json|tojson|safe }})">Add to Cart</button>
+                        <button type="submit">Add to Cart</button>
                     </form>
                 {% endif %}
             </div>
