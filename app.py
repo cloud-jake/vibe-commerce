@@ -109,7 +109,7 @@ def index():
         error = str(e)
         print(f"Error getting recommendations: {e}\n{traceback.format_exc()}")
 
-    return render_template('index.html', recommendations=recommendations, error=error)
+    return render_template('index.html', recommendations=recommendations, error=error, event_type='home-page-view')
 
 
 @app.route('/search')
@@ -122,14 +122,23 @@ def search():
     if len(query) < 2:
         return redirect(url_for('index'))
 
+    # Check for a URL parameter to control query expansion. Default to True.
+    use_expansion = request.args.get('expand', 'true').lower() == 'true'
+
     # --- Build Search Request ---
-    # Enable query expansion to broaden the search for better results.
-    # Pinning unexpanded results ensures that items matching the original
-    # query are ranked higher.
-    query_expansion_spec = SearchRequest.QueryExpansionSpec(
-        condition=SearchRequest.QueryExpansionSpec.Condition.AUTO,
-        pin_unexpanded_results=True
-    )
+    if use_expansion:
+        # Enable query expansion to broaden the search for better results.
+        # Pinning unexpanded results ensures that items matching the original
+        # query are ranked higher.
+        query_expansion_spec = SearchRequest.QueryExpansionSpec(
+            condition=SearchRequest.QueryExpansionSpec.Condition.AUTO,
+            pin_unexpanded_results=True
+        )
+    else:
+        # Explicitly disable query expansion if the URL parameter is set to 'false'.
+        query_expansion_spec = SearchRequest.QueryExpansionSpec(
+            condition=SearchRequest.QueryExpansionSpec.Condition.DISABLED
+        )
 
     search_request = SearchRequest(
         placement=search_placement,
@@ -149,11 +158,13 @@ def search():
             'search_results.html',
             results=search_response.results,
             results_json=results_for_js,
-            query=query
+            query=query,
+            use_expansion=use_expansion,
+            event_type='search'
         )
     except Exception as e:
         print(f"Error during search: {e}\n{traceback.format_exc()}")
-        return render_template('search_results.html', error=str(e), query=query)
+        return render_template('search_results.html', error=str(e), query=query, use_expansion=use_expansion, event_type='search')
 
 
 @app.route('/product/<string:product_id>')
@@ -176,7 +187,8 @@ def product_detail(product_id):
         return render_template(
             'product_detail.html',
             product=product_proto,
-            product_json=product_dict
+            product_json=product_dict,
+            event_type='detail-page-view'
         )
     except Exception as e:
         print(f"Error fetching product details: {e}\n{traceback.format_exc()}")
@@ -264,7 +276,7 @@ def add_to_cart():
 @app.route('/cart')
 def view_cart():
     """Displays the shopping cart."""
-    return render_template('cart.html', cart=session.get('cart', {}), total=session.get('cart_total', 0.0))
+    return render_template('cart.html', cart=session.get('cart', {}), total=session.get('cart_total', 0.0), event_type='shopping-cart-page-view')
 
 
 @app.route('/remove_from_cart/<product_id>', methods=['POST'])
@@ -309,7 +321,7 @@ def purchase_confirmation():
 
     # Clear the last order from session after displaying it
     session.pop('last_order', None)
-    return render_template('purchase_confirmation.html', order=last_order)
+    return render_template('purchase_confirmation.html', order=last_order, event_type='purchase-complete')
 
 if __name__ == '__main__':
     # This block is for running the app directly with `python app.py`

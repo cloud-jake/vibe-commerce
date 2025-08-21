@@ -64,6 +64,12 @@ const VibeTracker = {
     console.log("Queuing event:", payload);
     this._eventQueue.push(payload);
     this._flushQueue();
+
+    // Update debug footer with the latest event type
+    const eventTypeEl = document.getElementById('debug-event-type');
+    if (eventTypeEl) {
+      eventTypeEl.textContent = payload.eventType;
+    }
   },
 
   /**

@@ -18,6 +18,10 @@
             <div class="search-bar">
                 <form action="{{ url_for('search') }}" method="get">
                     <input type="search" name="query" placeholder="Search for products..." value="{{ query or '' }}" required minlength="2">
+                    {# If we are on a search results page and expansion was disabled, keep it disabled for the next search #}
+                    {% if use_expansion is defined and not use_expansion %}
+                        <input type="hidden" name="expand" value="false">
+                    {% endif %}
                     <button type="submit">Search</button>
                 </form>
             </div>
@@ -42,7 +46,13 @@
     </script>
     {% block scripts %}{% endblock %}
     <footer>
-        <p>&copy; 2024 - Vibe Commerce Demo</p>
+        <div class="footer-content">
+            <p>&copy; 2025 - Vibe Commerce Demo</p>
+            <div class="debug-info">
+                <span>Last Event: <code id="debug-event-type">{{ event_type or 'N/A' }}</code></span> |
+                <span>Visitor ID: <code>{{ visitor_id }}</code></span>
+            </div>
+        </div>
     </footer>
 </body>
 </html>
