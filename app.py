@@ -109,9 +109,13 @@ def index():
         for result in response.results:
             if 'product' in result.metadata:
                 # The 'product' in metadata is a Struct. The Product class constructor
-                # can handle being initialized directly from this Struct.
+                # expects snake_case field names (e.g., 'primary_product_id'), but the
+                # API returns camelCase names (e.g., 'primaryProductId') in the Struct.
+                # To fix this, we convert the Struct to a dict, then parse the dict
+                # into a Product message, which correctly handles the name conversion.
                 product_struct = result.metadata['product']
-                recommendations.append(Product(product_struct))
+                product_dict = json_format.MessageToDict(product_struct)
+                recommendations.append(json_format.ParseDict(product_dict, Product()))
 
     except (GoogleAPICallError, Exception) as e:
         error = str(e)
