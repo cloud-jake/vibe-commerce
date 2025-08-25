@@ -233,6 +233,7 @@ def search():
             current_page=page,
             total_pages=total_pages,
             total_results=search_response.total_size,
+            page_size=page_size,
             # sort_by=sort_by
         )
     except Exception as e:

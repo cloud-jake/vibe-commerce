@@ -7,12 +7,14 @@
 {% if total_pages > 1 %}
 <div class="pagination">
     <div class="pagination-summary">
-        Showing {{ results|length }} of {{ total_results }} results
+        {% set start_item = (current_page - 1) * page_size + 1 %}
+        {% set end_item = start_item + results|length - 1 %}
+        Showing {{ start_item }}-{{ end_item }} of {{ total_results }} results
     </div>
     <div class="pagination-links">
         {# Previous Page Link #}
         {% if current_page > 1 %}
-            {% set prev_args = request.args.to_dict() %}{% set _ = prev_args.update({'page': current_page - 1}) %}
+            {% set prev_args = request.args.to_dict(flat=False) %}{% set _ = prev_args.update({'page': current_page - 1}) %}
             <a href="{{ url_for('search', **prev_args) }}">&laquo; Previous</a>
         {% else %}
             <span class="disabled">&laquo; Previous</span>
@@ -28,7 +30,7 @@
                 {% if p == current_page %}
                     <span class="active">{{ p }}</span>
                 {% else %}
-                    {% set page_args = request.args.to_dict() %}{% set _ = page_args.update({'page': p}) %}
+                    {% set page_args = request.args.to_dict(flat=False) %}{% set _ = page_args.update({'page': p}) %}
                     <a href="{{ url_for('search', **page_args) }}">{{ p }}</a>
                 {% endif %}
             {% endif %}
@@ -36,7 +38,7 @@
 
         {# Next Page Link #}
         {% if current_page < total_pages %}
-            {% set next_args = request.args.to_dict() %}{% set _ = next_args.update({'page': current_page + 1}) %}
+            {% set next_args = request.args.to_dict(flat=False) %}{% set _ = next_args.update({'page': current_page + 1}) %}
             <a href="{{ url_for('search', **next_args) }}">Next &raquo;</a>
         {% else %}
             <span class="disabled">Next &raquo;</span>
