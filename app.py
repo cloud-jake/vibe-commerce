@@ -109,8 +109,9 @@ def index():
         for result in response.results:
             if 'product' in result.metadata:
                 # The 'product' in metadata is a Struct contained within a Value.
-                # We convert the Struct to a JSON string, then parse it into a Product object.
-                product_struct = result.metadata['product'].struct_value
+                # The result.metadata['product'] is already the product Struct.
+                # We convert it to a JSON string, then parse it into a Product object.
+                product_struct = result.metadata['product']
                 product_json = json_format.MessageToJson(product_struct)
                 recommendations.append(Product.from_json(product_json))
 
@@ -232,7 +233,7 @@ def product_detail(product_id):
         project=config.PROJECT_ID,
         location=config.LOCATION,
         catalog=config.CATALOG_ID,
-        branch="0", # The default branch is '0'
+        branch="1", # The search results show products are in branch '1'
         product=product_id
     )
 

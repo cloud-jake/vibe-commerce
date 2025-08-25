@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}{{ product.title or "Product Details" }}{% endblock %}
+{% block title %}
+    {%- if product and product.title -%}
+        {{ product.title }}
+    {%- else -%}
+        Product Details
+    {%- endif -%}
+{% endblock %}
 
 {% block content %}
     {% if error %}

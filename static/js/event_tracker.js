@@ -87,8 +87,10 @@ const VibeTracker = {
    * @param {Array<object>} results - The search results array.
    */
   trackSearchView(query, results) {
+    // The `results` are dicts from SearchResponse.SearchResult.to_dict().
+    // We use the top-level ID from the search result for event tracking.
     const productDetails = results.map(result => ({
-      product: { id: result.id } // Use the top-level ID from the search result
+      product: { id: result.id }
     }));
 
     this._logEvent({
