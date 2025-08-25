@@ -29,6 +29,47 @@
                     {{ product.description | safe }}
                 </div>
 
+                {% if product.brands %}
+                    <div class="product-brands">
+                        <h4>Brand</h4>
+                        <ul>
+                            {% for brand in product.brands %}
+                                <li>{{ brand }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if product.categories %}
+                    <div class="product-categories">
+                        <h4>Categories</h4>
+                        <ul>
+                            {% for category in product.categories %}
+                                <li>{{ category }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if product.attributes %}
+                    <div class="product-attributes">
+                        <h4>Specifications</h4>
+                        <table class="attributes-table">
+                            <tbody>
+                                {% for key, value in product.attributes.items() %}
+                                <tr>
+                                    <td><strong>{{ key|replace('_', ' ')|title }}</strong></td>
+                                    <td>
+                                        {% if value.text %}{{ value.text|join(', ') }}{% endif %}
+                                        {% if value.numbers %}{{ value.numbers|join(', ') }}{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+
                 {% if product.price_info and product.price_info.currency_code %}
                     <form action="{{ url_for('add_to_cart') }}" method="post" class="add-to-cart-form" onsubmit="VibeTracker.trackAddToCart({{ product_json|tojson|safe }})">
                         <input type="hidden" name="product_id" value="{{ product.id }}">

@@ -128,6 +128,7 @@ def search():
     Performs a search using the Vertex AI Search for Commerce Retail API.
     """
     query = request.args.get('query', '').strip()
+    # sort_by = request.args.get('sort_by', 'relevance')
     try:
         page = int(request.args.get('page', 1))
     except (ValueError, TypeError):
@@ -141,7 +142,7 @@ def search():
     # Add server-side validation to match the client-side minlength attribute
     if len(query) < 2:
         return redirect(url_for('index'))
-
+ 
     # --- Handle Facets ---
     facet_filters = []
     selected_facets = {}
@@ -184,6 +185,16 @@ def search():
         mode=SearchRequest.DynamicFacetSpec.Mode.ENABLED
     )
 
+    # # --- Handle Sorting ---
+    # sort_map = {
+    #     # 'relevance' is the default and is handled by omitting the order_by field.
+    #     'price_asc': 'price_info.price asc',
+    #     'price_desc': 'price_info.price desc',
+    # }
+    # # Get the API-specific sort string. If sort_by is 'relevance' or invalid,
+    # # this will be None, correctly triggering the API's default relevance sort.
+    # order_by_value = sort_map.get(sort_by)
+
     search_request = SearchRequest(
         placement=search_placement,
         query=query,
@@ -193,12 +204,16 @@ def search():
         query_expansion_spec=query_expansion_spec,
         dynamic_facet_spec=dynamic_facet_spec,
         filter=search_filter,
+        # order_by=order_by_value,
     )
 
     # --- Call the Retail API ---
     try:
-        search_response = search_client.search(search_request)
-
+        # The search method returns a SearchPager. We need to get the first page
+        # of the response to access metadata like facets and total_size.
+        search_pager = search_client.search(search_request)
+        search_response = next(search_pager.pages)
+ 
         total_pages = 0
         if search_response.total_size > 0:
             total_pages = int(math.ceil(search_response.total_size / page_size))
@@ -217,11 +232,12 @@ def search():
             event_type='search',
             current_page=page,
             total_pages=total_pages,
-            total_results=search_response.total_size
+            total_results=search_response.total_size,
+            # sort_by=sort_by
         )
     except Exception as e:
         print(f"Error during search: {e}\n{traceback.format_exc()}")
-        return render_template('search_results.html', error=str(e), query=query, use_expansion=use_expansion, event_type='search', facets=[], selected_facets={}, current_page=1, total_pages=0, total_results=0)
+        return render_template('search_results.html', error=str(e), query=query, use_expansion=use_expansion, event_type='search', facets=[], selected_facets={}, current_page=1, total_pages=0, total_results=0) #, sort_by='relevance')
 
 
 @app.route('/product/<string:product_id>')
