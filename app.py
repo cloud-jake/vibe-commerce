@@ -108,12 +108,10 @@ def index():
         # Process the results
         for result in response.results:
             if 'product' in result.metadata:
-                # The 'product' in metadata is a Struct contained within a Value.
-                # The result.metadata['product'] is already the product Struct.
-                # We convert it to a JSON string, then parse it into a Product object.
+                # The 'product' in metadata is a Struct. The Product class constructor
+                # can handle being initialized directly from this Struct.
                 product_struct = result.metadata['product']
-                product_json = json_format.MessageToJson(product_struct)
-                recommendations.append(Product.from_json(product_json))
+                recommendations.append(Product(product_struct))
 
     except (GoogleAPICallError, Exception) as e:
         error = str(e)
