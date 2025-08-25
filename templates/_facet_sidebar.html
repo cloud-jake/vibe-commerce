@@ -34,10 +34,29 @@
     {# Loop through facets, but only those that have values to display. #}
     {% for facet in facets if facet.facet_values %}
         <div class="facet-group">
-            <h5>{{ facet.display_name }}</h5>
+            {# Generate a user-friendly display name if one isn't provided by the API #}
+            {% set display_name = facet.display_name %}
+            {% if not display_name and facet.key.startswith('attributes.') %}
+                {% set display_name = facet.key[11:]|replace('_', ' ')|title %}
+            {% elif not display_name %}
+                {% set display_name = facet.key|replace('_', ' ')|title %}
+            {% endif %}
+            <h5>{{ display_name }}</h5>
             <ul>
                 {% for val in facet.facet_values %}
-                    <li class="facet-item"><a href="{{ request.path }}?{{ request.query_string }}&{{ facet.key }}={{ val.value|urlencode }}">{{ val.value }} ({{ val.count }})</a></li>
+                    {% set facet_display, facet_value_for_url = '', '' %}
+
+                    {% if val.value %}
+                        {# This is a standard text facet #}
+                        {% set facet_display, facet_value_for_url = val.value, val.value %}
+                    {% elif val.interval and val.interval.minimum is defined %}
+                        {# This is a numerical interval facet. Display the lower bound of the interval. #}
+                        {% set facet_display, facet_value_for_url = val.interval.minimum|round|int, val.interval.minimum|round|int %}
+                    {% endif %}
+
+                    {% if facet_display %}
+                        <li class="facet-item"><a href="{{ request.path }}?{{ request.query_string }}&{{ facet.key }}={{ facet_value_for_url|urlencode }}">{{ facet_display }} ({{ val.count }})</a></li>
+                    {% endif %}
                 {% endfor %}
             </ul>
         </div>
