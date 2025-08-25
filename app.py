@@ -112,8 +112,14 @@ def index():
                 # expects snake_case field names (e.g., 'primary_product_id'), but the
                 # API returns camelCase names (e.g., 'primaryProductId') in the Struct.
                 # To fix this, we convert the Struct to a dict, then parse the dict
-                # into a Product message, which correctly handles the name conversion.
-                product_struct = result.metadata['product']
+                # into a Product message. The object from result.metadata['product']
+                # can be a map-like proxy object instead of a full proto message,
+                # which causes issues with the json_format library.
+                # To work around this, we explicitly construct a Struct message,
+                # convert it to a dictionary, and then parse it.
+                product_data = result.metadata['product']
+                product_struct = struct_pb2.Struct()
+                product_struct.update(product_data)
                 product_dict = json_format.MessageToDict(product_struct)
                 recommendations.append(json_format.ParseDict(product_dict, Product()))
 
