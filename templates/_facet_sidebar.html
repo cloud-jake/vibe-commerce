@@ -16,12 +16,13 @@
                     {% set _ = new_args[key].remove(value) %}
                     {# If the key has no more values, remove the key itself #}
                     {% if not new_args[key] %}{% set _ = new_args.pop(key) %}{% endif %}
+                    {% if attribution_token %}{% set _ = new_args.update({'attribution_token': attribution_token}) %}{% endif %}
                     <a href="{{ url_for('search', **new_args) }}" class="remove-facet-link" title="Remove filter">&times;</a>
                 </li>
             {% endfor %}
         {% endfor %}
         </ul>
-        <a href="{{ url_for('search', query=query, expand=request.args.get('expand')) }}" class="clear-all-filters">Clear All</a>
+        <a href="{{ url_for('search', query=query, expand=request.args.get('expand'), attribution_token=attribution_token) }}" class="clear-all-filters">Clear All</a>
     {% else %}
         <p>None</p>
     {% endif %}
@@ -55,7 +56,12 @@
                     {% endif %}
 
                     {% if facet_display %}
-                        <li class="facet-item"><a href="{{ request.path }}?{{ request.query_string }}&{{ facet.key }}={{ facet_value_for_url|urlencode }}">{{ facet_display }} ({{ val.count }})</a></li>
+                        {% set add_args = request.args.to_dict(flat=False) %}
+                        {# Add the new facet value. This handles keys that might already exist. #}
+                        {% set existing_values = add_args.get(facet.key, []) %}
+                        {% set _ = add_args.update({facet.key: existing_values + [facet_value_for_url]}) %}
+                        {% if attribution_token %}{% set _ = add_args.update({'attribution_token': attribution_token}) %}{% endif %}
+                        <li class="facet-item"><a href="{{ url_for('search', **add_args) }}">{{ facet_display }} ({{ val.count }})</a></li>
                     {% endif %}
                 {% endfor %}
             </ul>

@@ -118,8 +118,9 @@ def index():
     except (GoogleAPICallError, Exception) as e:
         error = str(e)
         print(f"Error getting recommendations: {e}\n{traceback.format_exc()}")
-
-    return render_template('index.html', recommendations=recommendations, error=error, event_type='home-page-view')
+    
+    # Pass the attribution token from the predict response to the template
+    return render_template('index.html', recommendations=recommendations, error=error, event_type='home-page-view', attribution_token=response.attribution_token if 'response' in locals() else None)
 
 
 @app.route('/search')
@@ -128,7 +129,7 @@ def search():
     Performs a search using the Vertex AI Search for Commerce Retail API.
     """
     query = request.args.get('query', '').strip()
-    # sort_by = request.args.get('sort_by', 'relevance')
+    attribution_token = request.args.get('attribution_token')
     try:
         page = int(request.args.get('page', 1))
     except (ValueError, TypeError):
@@ -204,6 +205,7 @@ def search():
         query_expansion_spec=query_expansion_spec,
         dynamic_facet_spec=dynamic_facet_spec,
         filter=search_filter,
+        attribution_token=attribution_token,
         # order_by=order_by_value,
     )
 
@@ -234,6 +236,7 @@ def search():
             total_pages=total_pages,
             total_results=search_response.total_size,
             page_size=page_size,
+            attribution_token=search_response.attribution_token,
             # sort_by=sort_by
         )
     except Exception as e:
@@ -246,6 +249,7 @@ def product_detail(product_id):
     """
     Fetches and displays the details for a single product.
     """
+    attribution_token = request.args.get('attribution_token')
     product_name = product_client.product_path(
         project=config.PROJECT_ID,
         location=config.LOCATION,
@@ -262,7 +266,8 @@ def product_detail(product_id):
             'product_detail.html',
             product=product_proto,
             product_json=product_dict,
-            event_type='detail-page-view'
+            event_type='detail-page-view',
+            attribution_token=attribution_token
         )
     except Exception as e:
         print(f"Error fetching product details: {e}\n{traceback.format_exc()}")

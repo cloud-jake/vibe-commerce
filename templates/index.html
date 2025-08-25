@@ -17,7 +17,7 @@
             <div class="product-grid">
                 {% for product in recommendations %}
                     <div class="product-card">
-                        <a href="{{ url_for('product_detail', product_id=product.id) }}">
+                        <a href="{{ url_for('product_detail', product_id=product.id, attribution_token=attribution_token) }}">
                             <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}" alt="{{ product.title or 'Untitled Product' }}">
                             <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
                             {% if product.price_info and product.price_info.currency_code %}

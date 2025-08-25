@@ -22,6 +22,9 @@
                     {% if use_expansion is defined and not use_expansion %}
                         <input type="hidden" name="expand" value="false">
                     {% endif %}
+                    {% if attribution_token %}
+                        <input type="hidden" name="attribution_token" value="{{ attribution_token }}">
+                    {% endif %}
                     <button type="submit">Search</button>
                 </form>
             </div>
