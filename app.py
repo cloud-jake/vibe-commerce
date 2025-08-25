@@ -148,7 +148,7 @@ def search():
     facet_filters = []
     selected_facets = {}
     # Use a set to avoid reprocessing keys when using getlist
-    processed_keys = {'query', 'expand', 'page'}
+    processed_keys = {'query', 'expand', 'page', 'attribution_token'}
 
     for key in request.args:
         if key not in processed_keys:
@@ -205,7 +205,6 @@ def search():
         query_expansion_spec=query_expansion_spec,
         dynamic_facet_spec=dynamic_facet_spec,
         filter=search_filter,
-        attribution_token=attribution_token,
         # order_by=order_by_value,
     )
 
@@ -236,7 +235,10 @@ def search():
             total_pages=total_pages,
             total_results=search_response.total_size,
             page_size=page_size,
+            # This is the NEW token for actions taken on this page (e.g., clicking a product)
             attribution_token=search_response.attribution_token,
+            # This is the OLD token from the previous page, used for the search event itself.
+            search_event_attribution_token=attribution_token,
             # sort_by=sort_by
         )
     except Exception as e:

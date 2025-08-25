@@ -85,19 +85,25 @@ const VibeTracker = {
    * Tracks a 'search' event.
    * @param {string} query - The search query entered by the user.
    * @param {Array<object>} results - The search results array.
+   * @param {string|null} attributionToken - The attribution token from the preceding event.
    */
-  trackSearchView(query, results) {
+  trackSearchView(query, results, attributionToken) {
     // The `results` are dicts from SearchResponse.SearchResult.to_dict().
     // We use the top-level ID from the search result for event tracking.
     const productDetails = results.map(result => ({
       product: { id: result.id }
     }));
 
-    this._logEvent({
+    const eventPayload = {
       eventType: 'search',
       searchQuery: query,
       productDetails: productDetails,
-    });
+    };
+
+    if (attributionToken) {
+      eventPayload.attributionToken = attributionToken;
+    }
+    this._logEvent(eventPayload);
   },
 
   /**

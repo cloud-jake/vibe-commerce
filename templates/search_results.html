@@ -48,7 +48,8 @@
         <script>
             const searchResults = {{ results_json|tojson|safe }};
             const query = {{ query|tojson|safe }};
-            VibeTracker.trackSearchView(query, searchResults);
+            const attributionToken = {{ search_event_attribution_token|tojson|safe }};
+            VibeTracker.trackSearchView(query, searchResults, attributionToken);
         </script>
     {% endif %}
 {% endblock %}
