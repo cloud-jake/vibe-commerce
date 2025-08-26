@@ -50,16 +50,30 @@ Follow these steps to get the application running locally.
     gcloud auth application-default login
     ```
 
-5.  **Update the Application Configuration:**
-    Open `config.py` and update the following variables with your specific Google Cloud project details:
-    - `PROJECT_ID`
-    - `LOCATION`
-    - `CATALOG_ID`
-    - `SERVING_CONFIG_ID`
-    - `RECOMMENDATION_SERVING_CONFIG_ID`
+5.  **Configure Environment Variables:**
+    For local development and deployment, create a file named `.env` in the project root. This file will hold your configuration and secrets. Add the following, replacing the values with your own:
+
+    ```
+    # .env
+
+    # --- Google Cloud Project Configuration ---
+    PROJECT_ID="your-gcp-project-id"
+    REGION="us-central1"
+    LOCATION="global"
+    CATALOG_ID="default_catalog"
+    SERVING_CONFIG_ID="your-serving-config-id"
+    RECOMMENDATION_SERVING_CONFIG_ID="your-recommendation-config-id"
+
+    # --- Google OAuth Configuration ---
+    GOOGLE_CLIENT_ID="your-google-oauth-client-id.apps.googleusercontent.com"
+    GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
+    ```
+
+    > **Note:** The `.gitignore` file is already configured to prevent the `.env` file from being committed to version control.
 
 ## Running the Application
 
+### Locally
 Once the setup is complete, you can start the Flask development server:
 
 ```bash
@@ -67,6 +81,13 @@ flask run
 ```
 
 The application will be available at `http://127.0.0.1:5000`.
+
+### Deployment
+To deploy the application to Cloud Run, ensure your `.env` file is correctly populated and run the deployment script:
+
+```bash
+./deploy.sh
+```
 
 ---
 

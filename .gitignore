@@ -3,8 +3,11 @@
 
 # Python virtual environment
 venv/
-.venv/
 
 # Python cache
 __pycache__/
 *.pyc
+
+# IDE and OS files
+.idea/
+.DS_Store

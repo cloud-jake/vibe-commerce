@@ -3,6 +3,7 @@ import json
 import math
 import traceback
 import uuid
+from authlib.integrations.flask_client import OAuth
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.retail_v2 import (
@@ -29,6 +30,19 @@ import config
 app = Flask(__name__, template_folder="templates", static_folder="static")
 # A secret key is needed for session management (e.g., for the cart)
 app.secret_key = os.urandom(24)
+
+# --- OAuth Client Initialization ---
+oauth = OAuth(app)
+oauth.register(
+    name='google',
+    client_id=config.GOOGLE_CLIENT_ID,
+    client_secret=config.GOOGLE_CLIENT_SECRET,
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
+
 
 # --- Vertex AI Search Client Initialization ---
 
@@ -62,7 +76,8 @@ def inject_shared_variables():
         project_id=config.PROJECT_ID,
         catalog_id=config.CATALOG_ID,
         location=config.LOCATION,
-        visitor_id=session.get('visitor_id')
+        visitor_id=session.get('visitor_id'),
+        user=session.get('user')
     )
 
 
@@ -74,6 +89,40 @@ def initialize_session():
         session['cart_total'] = 0.0
     if 'visitor_id' not in session:
         session['visitor_id'] = str(uuid.uuid4())
+
+
+@app.route('/login')
+def login():
+    """Redirects to Google's authentication page."""
+    redirect_uri = url_for('callback', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.route('/callback')
+def callback():
+    """Handles the callback from Google after authentication."""
+    try:
+        token = oauth.google.authorize_access_token()
+        # The user's profile information is in the ID token
+        user_info = oauth.google.parse_id_token(token)
+        session['user'] = user_info
+
+        # IMPORTANT: Use the stable Google user ID as the visitor_id for
+        # consistent personalization and event tracking for logged-in users.
+        session['visitor_id'] = user_info['sub']
+
+        return redirect(url_for('index'))
+    except Exception as e:
+        print(f"Error during Google OAuth callback: {e}\n{traceback.format_exc()}")
+        return redirect(url_for('index')) # Redirect home on error
+
+
+@app.route('/logout')
+def logout():
+    """Logs the user out by clearing the session."""
+    session.pop('user', None)
+    session['visitor_id'] = str(uuid.uuid4()) # Reset to a new anonymous ID
+    return redirect(url_for('index'))
 
 
 @app.route('/')
@@ -204,8 +253,18 @@ def search():
     # # this will be None, correctly triggering the API's default relevance sort.
     # order_by_value = sort_map.get(sort_by)
 
+    # The branch to search. This should match the branch where product data is indexed.
+    # The product_detail page uses branch '1', so we use it here for consistency.
+    branch_path = SearchServiceClient.branch_path(
+        project=config.PROJECT_ID,
+        location=config.LOCATION,
+        catalog=config.CATALOG_ID,
+        branch="1"
+    )
+
     search_request = SearchRequest(
         placement=search_placement,
+        branch=branch_path,
         query=query,
         visitor_id=session.get('visitor_id'),
         page_size=page_size,

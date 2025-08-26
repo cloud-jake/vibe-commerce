@@ -22,3 +22,9 @@ SERVING_CONFIG_ID = os.environ.get("SERVING_CONFIG_ID", "vibe-search-1")
 # --- Recommendations Configuration ---
 # Your Recommendation Serving Config ID (e.g., "recently_viewed_default").
 RECOMMENDATION_SERVING_CONFIG_ID = os.environ.get("RECOMMENDATION_SERVING_CONFIG_ID", "recently_viewed_default")
+
+# --- Google OAuth Configuration ---
+# These are obtained from the Google Cloud Console when creating OAuth credentials.
+# Store them in your .env file for local development.
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
