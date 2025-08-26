@@ -15,8 +15,12 @@ else
   exit 1
 fi
 
-# Set a default region if it's not defined in the .env file.
+# Set default values for variables if they are not defined in the .env file.
 REGION=${REGION:-us-central1}
+LOCATION=${LOCATION:-global}
+CATALOG_ID=${CATALOG_ID:-default_catalog}
+SERVING_CONFIG_ID=${SERVING_CONFIG_ID:-default_search}
+RECOMMENDATION_SERVING_CONFIG_ID=${RECOMMENDATION_SERVING_CONFIG_ID:-recently_viewed_default}
 
 # Validate that all required variables are set
 REQUIRED_VARS=(
