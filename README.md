@@ -64,10 +64,25 @@ Follow these steps to get the application running locally.
     SERVING_CONFIG_ID="your-serving-config-id"
     RECOMMENDATION_SERVING_CONFIG_ID="your-recommendation-config-id"
 
+    # --- Flask Session Configuration ---
+    # Generate a secret key for session management. You can use the following command:
+    # python -c 'import os; print(os.urandom(24).hex())'
+    SECRET_KEY="your-generated-secret-key"
+
     # --- Google OAuth Configuration ---
     GOOGLE_CLIENT_ID="your-google-oauth-client-id.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
     ```
+
+    > **IMPORTANT - OAuth Redirect URIs:**
+    > The `redirect_uri_mismatch` error occurs if the redirect URIs are not correctly configured in your Google Cloud OAuth Client ID settings. You must add the following URIs to the "Authorized redirect URIs" list for your client ID in the Google Cloud Console:
+    >
+    > 1.  **For local development:**
+    >     -   `http://127.0.0.1:5000/callback`
+    >     -   `http://localhost:5000/callback`
+    >
+    > 2.  **For deployment on Cloud Run:**
+    >     -   After deploying, get your service's public URL (e.g., `https://vibe-commerce-....run.app`) and add the full callback URL to the list: `https://<your-cloud-run-url>/callback`
 
     > **Note:** The `.gitignore` file is already configured to prevent the `.env` file from being committed to version control.
 

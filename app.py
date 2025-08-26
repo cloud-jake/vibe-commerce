@@ -24,12 +24,23 @@ from google.cloud.retail_v2.types import (
 )
 from google.protobuf import json_format
 from google.protobuf import struct_pb2
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-# A secret key is needed for session management (e.g., for the cart)
-app.secret_key = os.urandom(24)
+
+# When deploying to a managed service like Cloud Run, the app is behind a
+# reverse proxy. The ProxyFix middleware helps the app correctly handle
+# headers like X-Forwarded-For and X-Forwarded-Proto, which is crucial for
+# generating correct external URLs (e.g., for OAuth callbacks).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# A stable secret key is needed for session management. It's loaded from config
+# and must be set in the environment for the app to run.
+app.secret_key = config.SECRET_KEY
+if not app.secret_key:
+    raise ValueError("No SECRET_KEY set for Flask application. Please set it in your .env file.")
 
 # --- OAuth Client Initialization ---
 oauth = OAuth(app)
@@ -157,18 +168,11 @@ def index():
         # Process the results
         for result in response.results:
             if 'product' in result.metadata:
-                # The 'product' in metadata is a Struct. The Product class constructor
-                # expects snake_case field names (e.g., 'primary_product_id'), but the
-                # API returns camelCase names (e.g., 'primaryProductId') in the Struct.
-                # To fix this, we convert the Struct to a dict, then parse the dict
-                # into a Product message. The object from result.metadata['product']
-                # can be a map-like proxy object instead of a full proto message,
-                # which causes issues with the json_format library.
-                # To work around this, we explicitly construct a Struct message,
-                # convert it to a dictionary, and then parse it.
-                product_data = result.metadata['product']
-                product_struct = struct_pb2.Struct()
-                product_struct.update(product_data)
+                # The 'product' in metadata is a Value message containing a Struct.
+                # We need to extract the Struct and convert it to a dict before
+                # parsing it into a Product message. This handles the camelCase to
+                # snake_case conversion of field names.
+                product_struct = result.metadata['product'].struct_value
                 product_dict = json_format.MessageToDict(product_struct)
                 recommendations.append(json_format.ParseDict(product_dict, Product()))
 

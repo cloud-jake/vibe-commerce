@@ -31,6 +31,7 @@ REQUIRED_VARS=(
   "RECOMMENDATION_SERVING_CONFIG_ID"
   "GOOGLE_CLIENT_ID"
   "GOOGLE_CLIENT_SECRET"
+  "SECRET_KEY"
 )
 
 for VAR_NAME in "${REQUIRED_VARS[@]}"; do
@@ -53,6 +54,7 @@ gcloud run deploy vibe-commerce \
   --set-env-vars="SERVING_CONFIG_ID=${SERVING_CONFIG_ID}" \
   --set-env-vars="RECOMMENDATION_SERVING_CONFIG_ID=${RECOMMENDATION_SERVING_CONFIG_ID}" \
   --set-env-vars="GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" \
-  --set-env-vars="GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
+  --set-env-vars="GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" \
+  --set-env-vars="SECRET_KEY=${SECRET_KEY}"
 
 echo "Deployment to Cloud Run initiated successfully."

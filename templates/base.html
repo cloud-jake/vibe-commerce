@@ -36,7 +36,7 @@
                     <span class="nav-user">Welcome, {{ user.given_name or user.name }}!</span>
                     <a href="{{ url_for('logout') }}">Logout</a>
                 {% else %}
-                    <a href="{{ url_for('login') }}" class="button">Login with Google</a>
+                    <button onclick="location.href='{{ url_for('login') }}'" class="button">Login with Google</button>
                 {% endif %}
             </nav>
         </div>
@@ -112,6 +112,9 @@
             <div class="debug-info">
                 <span>Last Event: <code id="debug-event-type">{{ event_type or 'N/A' }}</code></span> |
                 <span>Visitor ID: <code>{{ visitor_id }}</code></span>
+                {% if user %}
+                    | <span>User: <code>{{ user.email }}</code></span>
+                {% endif %}
             </div>
         </div>
     </footer>

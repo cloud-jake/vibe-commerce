@@ -78,11 +78,38 @@ header .search-bar button {
     cursor: pointer;
     font-size: 1em;
 }
-
+header .search-bar button:hover {
+    opacity: 0.9;
+}
+ 
 header nav a {
     text-decoration: none;
     color: var(--primary-color);
     font-weight: bold;
+}
+
+header nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Generic button style, used for Login */
+.button {
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: var(--surface-color) !important; /* Override link color if on an <a> tag */
+    border: 1px solid var(--primary-color);
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1em;
+}
+
+.button:hover {
+    opacity: 0.9;
 }
 
 /* Main Content */

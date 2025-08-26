@@ -23,6 +23,12 @@ SERVING_CONFIG_ID = os.environ.get("SERVING_CONFIG_ID", "vibe-search-1")
 # Your Recommendation Serving Config ID (e.g., "recently_viewed_default").
 RECOMMENDATION_SERVING_CONFIG_ID = os.environ.get("RECOMMENDATION_SERVING_CONFIG_ID", "recently_viewed_default")
 
+# --- Flask Session Configuration ---
+# A secret key for signing the session cookie. This should be a long, random
+# string. In production, this MUST be set as an environment variable.
+# You can generate one with: python -c 'import os; print(os.urandom(24).hex())'
+SECRET_KEY = os.environ.get("SECRET_KEY")
+
 # --- Google OAuth Configuration ---
 # These are obtained from the Google Cloud Console when creating OAuth credentials.
 # Store them in your .env file for local development.
