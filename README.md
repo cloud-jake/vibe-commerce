@@ -106,4 +106,4 @@ To deploy the application to Cloud Run, ensure your `.env` file is correctly pop
 
 ---
 
-This project is intended for demonstration purposes to showcase the capabilities of Vertex AI Search for retail.
+This project is intended for demonstration purposes to showcase the capabilities of Vertex AI Search for retail.  
