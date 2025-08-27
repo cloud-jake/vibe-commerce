@@ -1,13 +1,33 @@
 # Environment variables
 .env
 
-# Python virtual environment
-venv/
-
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Build and distribution artifacts
+build/
+dist/
+*.egg-info/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Flask instance folder (often contains local DBs or configs)
+instance/
+
+# Python virtual environment
+venv/
 
 # IDE and OS files
 .idea/
 .DS_Store
+Thumbs.db
+.vscode/
+
+# Log files
+*.log
