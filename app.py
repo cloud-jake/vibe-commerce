@@ -38,9 +38,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # A stable secret key is needed for session management. It's loaded from config
 # and must be set in the environment for the app to run.
+# The check for its existence is now handled centrally in config.py.
 app.secret_key = config.SECRET_KEY
-if not app.secret_key:
-    raise ValueError("No SECRET_KEY set for Flask application. Please set it in your .env file.")
 
 # --- OAuth Client Initialization ---
 oauth = OAuth(app)
