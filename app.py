@@ -497,13 +497,11 @@ def api_chat():
             products_for_session = []
             for r in search_pager.results:
                 product_dict = SearchResponse.SearchResult.to_dict(r)
+                # The product data is nested inside the 'product' key of the search result.
+                # We can simplify the logic by assigning this dictionary directly.
                 simplified_product = {
                     'id': product_dict.get('id'),
-                    'product': {
-                        'title': product_dict.get('product', {}).get('title'),
-                        'images': product_dict.get('product', {}).get('images', []),
-                        'priceInfo': product_dict.get('product', {}).get('priceInfo')
-                    }
+                    'product': product_dict.get('product', {})
                 }
                 products_for_session.append(simplified_product)
             bot_response['products'] = products_for_session
