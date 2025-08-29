@@ -26,6 +26,12 @@ This project is built on a modern, scalable stack of Google Cloud services.
 | <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/gemini.svg" width="24"> **[Gemini Model](https://deepmind.google/models/gemini/)** | Powers the generative AI capabilities, including the AI chat assistant. Primary model for generating the product catalog. |
 | <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/imagen.svg" width="24"> **[Imagen Model](https://deepmind.google/models/imagen/)** | Google's text-to-image model, used for generating product images. |
 
+## System Architecture
+
+This diagram illustrates how the different Google Cloud services work together to power the Vibe Commerce application.
+
+![Vibe Commerce Architecture](https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/vibe-commerce-arch.png)
+
 ## Getting Started
 
 Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.

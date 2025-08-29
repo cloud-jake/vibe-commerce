@@ -731,6 +731,19 @@ footer {
     margin: 2rem auto;
 }
 
+.architecture-diagram {
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.architecture-diagram img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
 .about-container h1, .about-container h2 {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.5rem;
