@@ -771,7 +771,11 @@ footer {
     border-bottom: none;
 }
 
-.tech-icon svg {
+.tech-stack-table .tech-icon {
+    width: 48px;
+}
+
+.tech-stack-table .tech-icon svg {
     width: 32px;
     height: 32px;
     display: block;
