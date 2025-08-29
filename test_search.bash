@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+
 # This script tests the search endpoint of the Retail API.
 # It sources environment variables from a .env file in the project root.
 
