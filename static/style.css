@@ -911,4 +911,23 @@ footer {
         max-width: 90%;
     }
 }
+
+/* --- Flash Message Banner --- */
+.flash-messages {
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+}
+
+.flash-message {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-weight: 500;
+}
+
+.flash-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
 }
