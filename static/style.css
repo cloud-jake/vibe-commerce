@@ -754,6 +754,39 @@ footer {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
+/* --- Technology Stack Table Styles --- */
+.tech-stack-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.tech-stack-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.tech-stack-table tr:last-child td {
+    border-bottom: none;
+}
+
+.tech-icon svg {
+    width: 32px;
+    height: 32px;
+    display: block;
+}
+
+.tech-stack-table a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.tech-stack-table a:hover {
+    color: var(--primary-color);
+}
+
 /* --- Hamburger Menu Styles --- */
 .hamburger-container {
     position: relative;
