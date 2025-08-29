@@ -48,5 +48,18 @@ curl -X POST \
   -d '{
     "query": "weber",
     "visitorId": "troubleshooting-visitor-id-123",
-    "pageSize": 50
+    "pageSize": 50,
+    "facetSpecs": [
+      {
+        "facetKey": { "key": "brands", "orderBy": "count desc" }
+      },
+      {
+        "facetKey": { "key": "categories", "orderBy": "count desc" }
+      },
+      {
+        "facetKey": { "key": "colorFamilies", "orderBy": "count desc" }
+      },
+      { "facetKey": { "key": "price" } },
+      { "facetKey": { "key": "rating" } }
+    ]
   }'

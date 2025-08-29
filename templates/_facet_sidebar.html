@@ -10,7 +10,17 @@
         {% for key, values in selected_facets.items() %}
             {% for value in values %}
                 <li class="applied-filter-tag">
-                    {{ value }}
+                    {% set display_value = value %}
+                    {% if (key == 'price' or key == 'rating') and '-' in value %}
+                        {% set parts = value.split('-') %}
+                        {% set min_val, max_val = parts[0], parts[1] %}
+                        {% if key == 'price' %}
+                            {% if min_val and max_val %}{% set display_value = '$' ~ min_val ~ ' - $' ~ max_val %}{% elif min_val %}{% set display_value = '$' ~ min_val ~ '+' %}{% else %}{% set display_value = 'Up to $' ~ max_val %}{% endif %}
+                        {% else %}
+                            {% if min_val and max_val %}{% set display_value = min_val ~ ' - ' ~ max_val %}{% elif min_val %}{% set display_value = min_val ~ '+' %}{% else %}{% set display_value = 'Up to ' ~ max_val %}{% endif %}
+                        {% endif %}
+                    {% endif %}
+                    {{ display_value }}
                     {# Logic to create a URL to remove this specific facet value #}
                     {% set new_args = request.args.to_dict(flat=False) %}
                     {% set _ = new_args[key].remove(value) %}
@@ -33,7 +43,7 @@
 <div class="available-facets">
     <h4>Refine By</h4>
     {# Loop through facets, but only those that have values to display. #}
-    {% for facet in facets if facet.facet_values %}
+    {% for facet in facets if facet.values %}
         <div class="facet-group">
             {# Generate a user-friendly display name if one isn't provided by the API #}
             {% set display_name = facet.display_name %}
@@ -44,17 +54,26 @@
             {% endif %}
             <h5>{{ display_name }}</h5>
             <ul>
-                {% for val in facet.facet_values %}
+                {% for val in facet.values %}
                     {% set facet_display, facet_value_for_url = '', '' %}
-
                     {% if val.value %}
                         {# This is a standard text facet #}
                         {% set facet_display, facet_value_for_url = val.value, val.value %}
-                    {% elif val.interval and val.interval.minimum is defined %}
-                        {# This is a numerical interval facet. Display the lower bound of the interval. #}
-                        {% set facet_display, facet_value_for_url = val.interval.minimum|round|int, val.interval.minimum|round|int %}
-                    {% endif %}
+                    {% elif val.interval %}
+                        {# This is a numerical interval facet. #}
+                        {% set min_val = val.interval.minimum if val.interval.minimum is defined else '' %}
+                        {% set max_val = val.interval.maximum if val.interval.maximum is defined else '' %}
+                        {% set facet_value_for_url = '%s-%s'|format(min_val, max_val) %}
 
+                        {# Create a user-friendly display string #}
+                        {% if facet.key == 'price' %}
+                            {% if min_val and max_val %}{% set facet_display = "$%.2f - $%.2f"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "$%.2f+"|format(min_val) %}{% else %}{% set facet_display = "Up to $%.2f"|format(max_val) %}{% endif %}
+                        {% elif facet.key == 'rating' %}
+                            {% if min_val and max_val %}{% set facet_display = "%.1f - %.1f stars"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "%.1f+ stars"|format(min_val) %}{% else %}{% set facet_display = "Up to %.1f stars"|format(max_val) %}{% endif %}
+                        {% else %} {# Default display for other numericals #}
+                            {% if min_val and max_val %}{% set facet_display = "%s - %s"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "%s+"|format(min_val) %}{% else %}{% set facet_display = "Up to %s"|format(max_val) %}{% endif %}
+                        {% endif %}
+                    {% endif %}
                     {% if facet_display %}
                         {% set add_args = request.args.to_dict(flat=False) %}
                         {# Add the new facet value. This handles keys that might already exist. #}

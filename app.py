@@ -237,14 +237,38 @@ def search():
         if key not in processed_keys:
             values = request.args.getlist(key)
             selected_facets[key] = values
-            # The API filter syntax is 'key: ANY("value1", "value2")'
-            filter_values = ', '.join([f'"{v}"' for v in values])
-            facet_filters.append(f'{key}: ANY({filter_values})')
+
+            # Check if the key is for a numerical facet we defined
+            if key in ['price', 'rating']:
+                # For numerical facets, we expect values like "10.00-25.00"
+                # and build filters like "(price >= 10.00 AND price < 25.00)".
+                # Multiple selected ranges for the same key are ORed together.
+                range_filters = []
+                for v in values:
+                    try:
+                        min_val_str, max_val_str = v.split('-', 1)
+                        range_filter_parts = []
+                        if min_val_str:
+                            range_filter_parts.append(f'{key} >= {float(min_val_str)}')
+                        if max_val_str:
+                            # The API's interval is exclusive for the maximum.
+                            range_filter_parts.append(f'{key} < {float(max_val_str)}')
+                        if range_filter_parts:
+                            range_filters.append(f"({' AND '.join(range_filter_parts)})")
+                    except (ValueError, IndexError):
+                        # Ignore malformed range values
+                        continue
+                if range_filters:
+                    facet_filters.append(f"({' OR '.join(range_filters)})")
+            else:
+                # Existing logic for textual facets
+                filter_values = ', '.join([f'"{v}"' for v in values])
+                facet_filters.append(f'{key}: ANY({filter_values})')
+
             processed_keys.add(key)
 
     # Combine all facet filters with AND
     search_filter = " AND ".join(facet_filters) if facet_filters else ""
-
 
     # Check for a URL parameter to control query expansion. Default to True.
     use_expansion = request.args.get('expand', 'true').lower() == 'true'
@@ -264,10 +288,17 @@ def search():
             condition=SearchRequest.QueryExpansionSpec.Condition.DISABLED
         )
 
-    # Enable dynamic faceting
-    dynamic_facet_spec = SearchRequest.DynamicFacetSpec(
-        mode=SearchRequest.DynamicFacetSpec.Mode.ENABLED
-    )
+    # Define explicit facet specifications instead of using dynamic faceting.
+    # This gives more control over which facets are returned and how they are ordered.
+    facet_specs = [
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc")),
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc")),
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc")),
+        # For numerical facets like price and rating, we can let the API generate dynamic intervals
+        # based on the distribution of values in the search results.
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="price")),
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="rating")),
+    ]
 
     # # --- Handle Sorting ---
     # sort_map = {
@@ -280,12 +311,12 @@ def search():
     # order_by_value = sort_map.get(sort_by)
 
     # The branch to search. This should match the branch where product data is indexed.
-    # The product_detail page uses branch '1', so we use it here for consistency.
+    # By default, product data is ingested into branch '0' (the default_branch).
     branch_path = SearchServiceClient.branch_path(
         project=config.PROJECT_ID,
         location=config.LOCATION,
         catalog=config.CATALOG_ID,
-        branch="1"
+        branch="default_branch"
     )
 
     search_request = SearchRequest(
@@ -296,7 +327,7 @@ def search():
         page_size=page_size,
         offset=offset,
         query_expansion_spec=query_expansion_spec,
-        dynamic_facet_spec=dynamic_facet_spec,
+        facet_specs=facet_specs,
         filter=search_filter,
         # order_by=order_by_value,
     )
@@ -349,7 +380,7 @@ def product_detail(product_id):
         project=config.PROJECT_ID,
         location=config.LOCATION,
         catalog=config.CATALOG_ID,
-        branch="1", # The search results show products are in branch '1'
+        branch="default_branch", # Search and get operations should use the same branch, typically '0' (default_branch).
         product=product_id
     )
 
@@ -391,7 +422,7 @@ def chat():
                 project=config.PROJECT_ID,
                 location=config.LOCATION,
                 catalog=config.CATALOG_ID,
-                branch="1"  # Use branch '1' for consistency
+                branch="default_branch"  # Use branch '0' (default_branch) for consistency
             )
 
             conv_search_request = ConversationalSearchRequest(
