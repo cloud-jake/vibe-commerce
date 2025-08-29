@@ -17,9 +17,24 @@
                     <span></span>
                 </button>
                 <div class="hamburger-dropdown" id="hamburger-dropdown">
-                    <a href="{{ url_for('index') }}">Home</a>
-                    <a href="{{ url_for('chat') }}">AI Chat</a>
-                    <a href="{{ url_for('about') }}">About</a>
+                    <a href="{{ url_for('index') }}" class="nav-link-with-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        <span>Home</span>
+                    </a>
+                    <a href="{{ url_for('chat') }}" class="nav-link-with-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M14.5 7.5l-1-1-1 1"></path><path d="M12 11.5l-1-1-1 1"></path><path d="M9.5 7.5l1 1 1-1"></path>
+                        </svg>
+                        <span>AI Chat</span>
+                    </a>
+                    <a href="{{ url_for('about') }}" class="nav-link-with-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <span>About</span>
+                    </a>
                 </div>
             </div>
             <div class="logo">

@@ -17,45 +17,52 @@
                 </div>
             {% else %}
                 <div class="chat-message bot-message">
-                    {% if message.text %}
-                        <p>{{ message.text | safe }}</p>
-                    {% endif %}
+                    <div class="bot-icon-wrapper">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9L12 2Z"/>
+                        </svg>
+                    </div>
+                    <div class="bot-message-content">
+                        {% if message.text %}
+                            <p>{{ message.text | safe }}</p>
+                        {% endif %}
 
-                    {% if message.refined_queries %}
-                        <div class="refined-queries">
-                            <p>You could also try:</p>
-                            {% for refined_query in message.refined_queries %}
-                                <button type="button" class="refined-query-button" data-query="{{ refined_query }}">{{ refined_query }}</button>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-
-                    {% if message.products %}
-                        <div class="product-carousel">
-                            <div class="product-grid">
-                                {# The products are stored as dictionaries in the session, so we access keys with dot notation. #}
-                                {# The keys are camelCase (e.g., 'priceInfo') as they come from the .to_dict() conversion. #}
-                                {% for result in message.products %}
-                                    {% set product = result.product %}
-                                    <div class="product-card">
-                                        <a href="{{ url_for('product_detail', product_id=result.id) }}" target="_blank" rel="noopener noreferrer">
-                                            <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}" alt="{{ product.title or 'Untitled Product' }}">
-                                            <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
-                                            {% if product.price_info and product.price_info.price is defined and product.price_info.price is not none %}
-                                                <p class="price">${{ "%.2f"|format(product.price_info.price) }}</p>
-                                            {% else %}
-                                                <p class="price price-unavailable">Price not available</p>
-                                            {% endif %}
-                                        </a>
-                                    </div>
+                        {% if message.refined_queries %}
+                            <div class="refined-queries">
+                                <p>You could also try:</p>
+                                {% for refined_query in message.refined_queries %}
+                                    <button type="button" class="refined-query-button" data-query="{{ refined_query }}">{{ refined_query }}</button>
                                 {% endfor %}
                             </div>
-                        </div>
-                    {% endif %}
+                        {% endif %}
 
-                    {% if message.followup_question %}
-                        <p class="followup-question">{{ message.followup_question }}</p>
-                    {% endif %}
+                        {% if message.products %}
+                            <div class="product-carousel">
+                                <div class="product-grid">
+                                    {# The products are stored as dictionaries in the session, so we access keys with dot notation. #}
+                                    {# The keys are camelCase (e.g., 'priceInfo') as they come from the .to_dict() conversion. #}
+                                    {% for result in message.products %}
+                                        {% set product = result.product %}
+                                        <div class="product-card">
+                                            <a href="{{ url_for('product_detail', product_id=result.id) }}" target="_blank" rel="noopener noreferrer">
+                                                <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}" alt="{{ product.title or 'Untitled Product' }}">
+                                                <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
+                                                {% if product.price_info and product.price_info.price is defined and product.price_info.price is not none %}
+                                                    <p class="price">${{ "%.2f"|format(product.price_info.price) }}</p>
+                                                {% else %}
+                                                    <p class="price price-unavailable">Price not available</p>
+                                                {% endif %}
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if message.followup_question %}
+                            <p class="followup-question">{{ message.followup_question }}</p>
+                        {% endif %}
+                    </div>
                 </div>
             {% endif %}
         {% endfor %}
@@ -88,19 +95,27 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderBotMessage = (message) => {
-        let content = '';
+        const iconHtml = `
+            <div class="bot-icon-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9L12 2Z"/>
+                </svg>
+            </div>
+        `;
+
+        let contentHtml = '<div class="bot-message-content">';
         if (message.text) {
-            content += `<p>${message.text}</p>`;
+            contentHtml += `<p>${message.text}</p>`;
         }
         if (message.refined_queries && message.refined_queries.length > 0) {
-            content += '<div class="refined-queries"><p>You could also try:</p>';
+            contentHtml += '<div class="refined-queries"><p>You could also try:</p>';
             message.refined_queries.forEach(q => {
-                content += `<button type="button" class="refined-query-button" data-query="${q}">${q}</button>`;
+                contentHtml += `<button type="button" class="refined-query-button" data-query="${q}">${q}</button>`;
             });
-            content += '</div>';
+            contentHtml += '</div>';
         }
         if (message.products && message.products.length > 0) {
-            content += '<div class="product-carousel"><div class="product-grid">';
+            contentHtml += '<div class="product-carousel"><div class="product-grid">';
             message.products.forEach(result => {
                 const product = result.product;
                 const imageUrl = (product.images && product.images.length > 0) ? product.images[0].uri : 'https://via.placeholder.com/200';
@@ -114,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     priceHtml = `<p class="price price-unavailable">Price not available</p>`;
                 }
 
-                content += `
+                contentHtml += `
                     <div class="product-card">
                         <a href="${detailUrl}" target="_blank" rel="noopener noreferrer">
                             <img src="${imageUrl}" alt="${title}">
@@ -124,12 +139,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             });
-            content += '</div></div>';
+            contentHtml += '</div></div>';
         }
         if (message.followup_question) {
-            content += `<p class="followup-question">${message.followup_question}</p>`;
+            contentHtml += `<p class="followup-question">${message.followup_question}</p>`;
         }
-        return content;
+        contentHtml += '</div>';
+        return iconHtml + contentHtml;
     };
 
     const addMessageToUI = (content, isUser) => {
