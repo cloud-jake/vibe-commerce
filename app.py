@@ -697,7 +697,8 @@ def add_to_cart():
     session['cart_total'] = sum(item['price'] * item['quantity'] for item in cart.values())
 
     # Flash a success message to be displayed on the next page
-    flash(f"'{product_title}' has been added to your cart.", 'success')
+    cart_url = url_for('view_cart')
+    flash(f"'{product_title}' has been added to your <a href=\"{cart_url}\">cart</a>.", 'success')
 
     # Redirect back to the page the user came from for a smoother experience
     return redirect(request.referrer or url_for('index'))

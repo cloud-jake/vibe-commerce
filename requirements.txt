@@ -1,3 +1,5 @@
 Flask
 Authlib
 google-cloud-retail
+gunicorn
+python-dotenv
