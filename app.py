@@ -16,6 +16,7 @@ from google.cloud.retail_v2 import (
 from google.cloud.retail_v2.types import (
     CompleteQueryRequest,
     PredictRequest,
+    PredictResponse,
     Product,
     SearchResponse,
     WriteUserEventRequest,
@@ -166,12 +167,21 @@ def index():
 
         # Process the results
         for result in response.results:
-            if 'product' in result.metadata:
-                # The 'product' in the prediction result metadata is a Struct,
-                # which is represented as a MapComposite in the Python client.
-                # We convert this directly to a dictionary.
-                product_dict = json_format.MessageToDict(result.metadata['product'])
-                # Then, we serialize it to a JSON string to use the `Product.from_json`
+            # Convert the PredictionResult proto message to a dictionary.
+            # This correctly handles all nested structures and types, including
+            # the product metadata which is a Struct.
+            result_dict = PredictResponse.PredictionResult.to_dict(result)
+
+            # The product data is inside the 'metadata' dictionary.
+            if 'product' in result_dict.get('metadata', {}):
+                product_dict = result_dict['metadata']['product']
+
+                # The .to_dict() method can add a "@type" field which is not
+                # part of the Product proto schema and causes a ParseError.
+                # We remove it before attempting to load it back into a Product message.
+                product_dict.pop('@type', None)
+
+                # Then, we serialize the dictionary to a JSON string to use the `Product.from_json`
                 # helper, which correctly handles field name conversions (e.g., priceInfo -> price_info).
                 product_json_str = json.dumps(product_dict)
                 recommendations.append(Product.from_json(product_json_str))
