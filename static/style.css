@@ -676,3 +676,126 @@ footer {
         transform: scale(1.0);
     }
 }
+
+/* --- About Page Styles --- */
+
+.about-container {
+    background-color: var(--surface-color);
+    padding: 2rem 3rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    max-width: 900px;
+    margin: 2rem auto;
+}
+
+.about-container h1, .about-container h2 {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.about-container .lead {
+    font-size: 1.2em;
+    color: #555;
+    margin-bottom: 2rem;
+}
+
+.about-container ul {
+    padding-left: 20px;
+}
+
+.inspiration-section {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.inspiration-text {
+    flex: 2;
+    min-width: 300px;
+}
+
+.inspiration-image {
+    flex: 1;
+    min-width: 250px;
+}
+
+.inspiration-image img {
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* --- Hamburger Menu Styles --- */
+.hamburger-container {
+    position: relative;
+    margin-right: 1rem;
+}
+
+.hamburger-menu {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 40px;
+    height: 40px;
+}
+
+.hamburger-menu span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background-color: var(--text-color);
+    border-radius: 3px;
+    transition: all 0.3s ease-in-out;
+}
+
+.hamburger-menu[aria-expanded="true"] span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.hamburger-menu[aria-expanded="true"] span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-menu[aria-expanded="true"] span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+.hamburger-dropdown {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    padding: 0.5rem 0;
+    min-width: 180px;
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.hamburger-dropdown.is-open {
+    display: block;
+}
+
+.hamburger-dropdown a {
+    display: block;
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.hamburger-dropdown a:hover {
+    background-color: var(--background-color);
+    color: var(--primary-color);
+}
+}

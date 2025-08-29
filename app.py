@@ -206,6 +206,12 @@ def index():
     return render_template('index.html', recommendations=recommendations, error=error, event_type='home-page-view', attribution_token=response.attribution_token if 'response' in locals() else None)
 
 
+@app.route('/about')
+def about():
+    """Renders the about page."""
+    return render_template('about.html')
+
+
 @app.route('/search')
 def search():
     """

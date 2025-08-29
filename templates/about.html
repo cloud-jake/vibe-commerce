@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}About Vibe Commerce{% endblock %}
+
+{% block content %}
+    <div class="about-container">
+        <h1>About Vibe Commerce</h1>
+        <p class="lead">This is a demo e-commerce site developed completely by vibe-coding with Gemini Code Assist.</p>
+
+        <h2>Purpose</h2>
+        <p>Vibe Commerce is a fictional e-commerce site built for the express purpose of demonstrating the powerful capabilities of <strong>Google Cloud's Vertex AI Search for Commerce</strong>. It's designed to illustrate how AI can create a modern, personalized, and intelligent shopping experience from the ground up.</p>
+
+        <h2>Key Features</h2>
+        <p>This demo highlights several core features of Vertex AI Search for Commerce:</p>
+        <ul>
+            <li><strong>Site Search:</strong> Experience fast, relevant, and intuitive search results that understand user intent, not just keywords.</li>
+            <li><strong>Product Recommendations:</strong> Discover products tailored to your browsing history and preferences with our "Recommended For You" carousels.</li>
+            <li><strong>Conversational Commerce:</strong> Engage with our AI-powered chat assistant to find products, ask questions, and receive guidance through natural language conversation.</li>
+        </ul>
+
+        <h2>Inspiration</h2>
+        <div class="inspiration-section">
+            <div class="inspiration-text">
+                <p>The design and spirit of this demo site are affectionately modeled after <a href="https://en.wikipedia.org/wiki/Toys_%22R%22_Us" target="_blank" rel="noopener noreferrer">Toys "R" Us</a>, a beloved childhood toy store that was a cultural icon in the 1980s. For many, it was a magical place of discovery and joy. Though the original stores have since closed, this project aims to recapture a small piece of that nostalgic experience within a modern, AI-powered e-commerce framework.</p>
+            </div>
+            <div class="inspiration-image">
+                <img src="{{ url_for('static', filename='1980s_tru.png') }}" alt="A 1980s Toys R Us store front">
+            </div>
+        </div>
+
+        <h2>Author</h2>
+        <p>This project was created by <strong>Jake Holmquist</strong>, Field CTO, Google Cloud at Valtech.</p>
+
+        <h2>Source Code</h2>
+        <p>The complete source code for this project is available on GitHub. You can explore the code, see how the features were implemented, and even contribute to the project here: <a href="https://github.com/cloud-jake/vibe-commerce" target="_blank" rel="noopener noreferrer">https://github.com/cloud-jake/vibe-commerce</a>.</p>
+    </div>
+{% endblock %}

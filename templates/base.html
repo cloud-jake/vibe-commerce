@@ -10,6 +10,17 @@
 <body>
     <header>
         <div class="container">
+            <div class="hamburger-container">
+                <button class="hamburger-menu" id="hamburger-menu" aria-label="Toggle menu" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="hamburger-dropdown" id="hamburger-dropdown">
+                    <a href="{{ url_for('chat') }}">AI Chat</a>
+                    <a href="{{ url_for('about') }}">About</a>
+                </div>
+            </div>
             <div class="logo">
                 <a href="{{ url_for('index') }}">
                     <img src="{{ url_for('static', filename='logo.png') }}" alt="Vibe Commerce Logo">
@@ -29,9 +40,6 @@
                 </form>
             </div>
             <nav>
-                <a href="{{ url_for('chat') }}">
-                    AI Chat
-                </a>
                 <a href="{{ url_for('view_cart') }}">
                     Cart ({{ session.get('cart', {})|length }})
                 </a>
@@ -41,7 +49,7 @@
                 {% else %}
                     <button onclick="location.href='{{ url_for('login') }}'" class="button">Login with Google</button>
                 {% endif %}
-            </nav>
+            </div>
         </div>
     </header>
 
@@ -55,6 +63,26 @@
         VibeTracker.init({
             visitorId: '{{ visitor_id }}'
         });
+    </script>
+    <script>
+        // --- Hamburger Menu Logic ---
+        const hamburgerBtn = document.getElementById('hamburger-menu');
+        const hamburgerDropdown = document.getElementById('hamburger-dropdown');
+
+        if (hamburgerBtn && hamburgerDropdown) {
+            hamburgerBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent the document click listener from firing immediately
+                const isExpanded = hamburgerBtn.getAttribute('aria-expanded') === 'true';
+                hamburgerBtn.setAttribute('aria-expanded', !isExpanded);
+                hamburgerDropdown.classList.toggle('is-open');
+            });
+
+            // Hide menu when clicking anywhere else on the page
+            document.addEventListener('click', () => {
+                hamburgerDropdown.classList.remove('is-open');
+                hamburgerBtn.setAttribute('aria-expanded', 'false');
+            });
+        }
     </script>
     {% block scripts %}{% endblock %}
     <script>
