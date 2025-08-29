@@ -400,103 +400,122 @@ def product_detail(product_id):
         return render_template('product_detail.html', error=str(e))
 
 
-@app.route('/chat', methods=['GET', 'POST'])
+@app.route('/chat', methods=['GET'])
 def chat():
-    """Handles the conversational commerce chat interface."""
+    """Renders the conversational commerce chat interface."""
     # Initialize chat state in session if it doesn't exist
     if 'chat_history' not in session:
         session['chat_history'] = []
         session['conversation_id'] = ""  # Start with an empty conversation ID
 
-    if request.method == 'POST':
-        query = request.form.get('query', '').strip()
-        if not query:
-            return redirect(url_for('chat'))
-
-        # Add user's message to history
-        session['chat_history'].append({'is_user': True, 'text': query})
-
-        try:
-            # Build the conversational search request
-            branch_path = SearchServiceClient.branch_path(
-                project=config.PROJECT_ID,
-                location=config.LOCATION,
-                catalog=config.CATALOG_ID,
-                branch="default_branch"  # Use branch '0' (default_branch) for consistency
-            )
-
-            conv_search_request = ConversationalSearchRequest(
-                placement=conversational_placement,
-                branch=branch_path,
-                query=query,
-                visitor_id=session.get('visitor_id'),
-                conversation_id=session.get('conversation_id'),
-                conversational_filtering_spec=ConversationalSearchRequest.ConversationalFilteringSpec(
-                    conversational_filtering_mode=ConversationalSearchRequest.ConversationalFilteringSpec.Mode.DISABLED
-                )
-            )
-
-            streaming_response = conversational_search_client.conversational_search(request=conv_search_request)
-
-            # The response is a stream. We need to aggregate the chunks to get the full response.
-            response = ConversationalSearchResponse()
-            for chunk in streaming_response:
-                response._pb.MergeFrom(chunk._pb)
-
-            # Update conversation ID for the session
-            session['conversation_id'] = response.conversation_id
-
-            # --- Process the response for the template ---
-            bot_response = {
-                'is_user': False,
-                'text': response.conversational_text_response,
-                'followup_question': response.followup_question.followup_question if response.followup_question else None,
-                'refined_queries': [rs.query for rs in response.refined_search],
-                'products': []
-            }
-
-            # If the AI provides refined search queries, fetch products for the first one
-            if response.refined_search:
-                refined_query = response.refined_search[0].query
-                search_req = SearchRequest(
-                    placement=search_placement,
-                    branch=branch_path,
-                    query=refined_query,
-                    visitor_id=session.get('visitor_id'),
-                    page_size=5,  # Show a small number of products in the chat UI
-                )
-                search_pager = search_client.search(request=search_req)
-                # Convert SearchResult proto messages to dictionaries to make them JSON serializable for the session.
-                # Storing the full product data can quickly exceed the browser's cookie size limit for sessions.
-                # We'll store a simplified version with only the data needed for rendering in the chat.
-                products_for_session = []
-                for r in search_pager.results:
-                    product_dict = SearchResponse.SearchResult.to_dict(r)
-                    # Extract only the necessary fields to keep the session small.
-                    simplified_product = {
-                        'id': product_dict.get('id'),
-                        'product': {
-                            'title': product_dict.get('product', {}).get('title'),
-                            'images': product_dict.get('product', {}).get('images', []),
-                            'priceInfo': product_dict.get('product', {}).get('priceInfo')
-                        }
-                    }
-                    products_for_session.append(simplified_product)
-                bot_response['products'] = products_for_session
-
-            session['chat_history'].append(bot_response)
-
-        except (GoogleAPICallError, Exception) as e:
-            error_message = f"Error during conversational search: {e}"
-            print(f"{error_message}\n{traceback.format_exc()}")
-            session['chat_history'].append({'is_user': False, 'text': "Sorry, I encountered an error. Please try again."})
-
-        session.modified = True  # Ensure session changes are saved
-        return redirect(url_for('chat'))
-
     # For GET requests, just render the chat history from the session.
-    # No additional data like homepage recommendations should be fetched here.
-    return render_template('chat.html', chat_history=session.get('chat_history', []))
+    return render_template(
+        'chat.html',
+        chat_history=session.get('chat_history', []),
+        conversation_id=session.get('conversation_id', '')
+    )
+
+
+@app.route('/api/chat', methods=['POST'])
+def api_chat():
+    """Handles asynchronous chat requests."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    query = data.get('query', '').strip()
+    conversation_id = data.get('conversation_id', '')
+
+    if not query:
+        return jsonify({"error": "Query cannot be empty"}), 400
+
+    # Add user's message to session history for persistence across reloads
+    if 'chat_history' not in session:
+        session['chat_history'] = []
+    session['chat_history'].append({'is_user': True, 'text': query})
+
+    try:
+        # Build the conversational search request
+        branch_path = SearchServiceClient.branch_path(
+            project=config.PROJECT_ID,
+            location=config.LOCATION,
+            catalog=config.CATALOG_ID,
+            branch="default_branch"
+        )
+
+        conv_search_request = ConversationalSearchRequest(
+            placement=conversational_placement,
+            branch=branch_path,
+            query=query,
+            visitor_id=session.get('visitor_id'),
+            conversation_id=conversation_id,
+            conversational_filtering_spec=ConversationalSearchRequest.ConversationalFilteringSpec(
+                conversational_filtering_mode=ConversationalSearchRequest.ConversationalFilteringSpec.Mode.DISABLED
+            )
+        )
+
+        streaming_response = conversational_search_client.conversational_search(request=conv_search_request)
+
+        # Aggregate the streaming response
+        response = ConversationalSearchResponse()
+        for chunk in streaming_response:
+            response._pb.MergeFrom(chunk._pb)
+
+        new_conversation_id = response.conversation_id
+
+        # --- Process the response for the template ---
+        bot_response = {
+            'is_user': False,
+            'text': response.conversational_text_response,
+            'followup_question': response.followup_question.followup_question if response.followup_question else None,
+            'refined_queries': [rs.query for rs in response.refined_search],
+            'products': []
+        }
+
+        # If the AI provides refined search queries, fetch products for the first one
+        if response.refined_search:
+            refined_query = response.refined_search[0].query
+            search_req = SearchRequest(
+                placement=search_placement,
+                branch=branch_path,
+                query=refined_query,
+                visitor_id=session.get('visitor_id'),
+                page_size=5,
+            )
+            search_pager = search_client.search(request=search_req)
+            
+            products_for_session = []
+            for r in search_pager.results:
+                product_dict = SearchResponse.SearchResult.to_dict(r)
+                simplified_product = {
+                    'id': product_dict.get('id'),
+                    'product': {
+                        'title': product_dict.get('product', {}).get('title'),
+                        'images': product_dict.get('product', {}).get('images', []),
+                        'priceInfo': product_dict.get('product', {}).get('priceInfo')
+                    }
+                }
+                products_for_session.append(simplified_product)
+            bot_response['products'] = products_for_session
+
+        # Add bot's response to session history
+        session['chat_history'].append(bot_response)
+        session.modified = True
+
+        # Return the bot's response and new conversation ID to the client
+        return jsonify({
+            'bot_response': bot_response,
+            'conversation_id': new_conversation_id
+        })
+
+    except (GoogleAPICallError, Exception) as e:
+        error_message = "Sorry, I encountered an error. Please try again."
+        # Add error to session history
+        session['chat_history'].append({'is_user': False, 'text': error_message})
+        session.modified = True
+        print(f"Error during conversational search: {e}\n{traceback.format_exc()}")
+        # Return error to client
+        return jsonify({"error": str(e), "bot_response": {'text': error_message}}), 500
 
 
 @app.route('/clear_chat', methods=['POST'])

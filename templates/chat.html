@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="chat-container">
-    <div class="chat-history">
+    <div class="chat-history" id="chat-history">
         {% if not chat_history %}
             <div class="chat-message bot-message">
                 <p>Welcome to the Vibe Commerce AI assistant! How can I help you find the perfect product today?</p>
@@ -25,10 +25,7 @@
                         <div class="refined-queries">
                             <p>You could also try:</p>
                             {% for refined_query in message.refined_queries %}
-                                <form action="{{ url_for('chat') }}" method="post" style="display: inline;">
-                                    <input type="hidden" name="query" value="{{ refined_query }}">
-                                    <button type="submit" class="refined-query-button">{{ refined_query }}</button>
-                                </form>
+                                <button type="button" class="refined-query-button" data-query="{{ refined_query }}">{{ refined_query }}</button>
                             {% endfor %}
                         </div>
                     {% endif %}
@@ -64,31 +61,140 @@
         {% endfor %}
     </div>
     <div class="chat-input-area">
-        <form action="{{ url_for('chat') }}" method="post" class="chat-form">
+        <form action="{{ url_for('api_chat') }}" method="post" class="chat-form" id="chat-form">
             <input type="text" name="query" placeholder="Ask me anything about our products..." required autofocus autocomplete="off">
-            <button type="submit">Send</button>
+            <button type="submit" title="Send">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
         </form>
         <form action="{{ url_for('clear_chat') }}" method="post" class="clear-chat-form">
-            <button type="submit" class="button-secondary">Clear Chat</button>
+            <button type="submit">Clear Chat</button>
         </form>
     </div>
 </div>
 
-{# The section below incorrectly displays homepage recommendations and should be removed. #}
-{#
-<h2>Recommended For You</h2>
+{% endblock %}
 
-{% if error %}
-    <p class="error">Could not load recommendations: {{ error }}</p>
-{% elif recommendations %}
-    <div class="product-carousel">
-        <div class="product-grid">
-            {% for product in recommendations %}
-                {% include 'product_card.html' %}
-            {% endfor %}
-        </div>
-    </div>
-{% endif %}
-#}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const chatForm = document.getElementById('chat-form');
+    const queryInput = chatForm.querySelector('input[name="query"]');
+    const chatHistory = document.getElementById('chat-history');
+    let conversationId = '{{ conversation_id }}'; // Get initial ID from Flask
 
+    const scrollToBottom = () => {
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    };
+
+    const renderBotMessage = (message) => {
+        let content = '';
+        if (message.text) {
+            content += `<p>${message.text}</p>`;
+        }
+        if (message.refined_queries && message.refined_queries.length > 0) {
+            content += '<div class="refined-queries"><p>You could also try:</p>';
+            message.refined_queries.forEach(q => {
+                content += `<button type="button" class="refined-query-button" data-query="${q}">${q}</button>`;
+            });
+            content += '</div>';
+        }
+        if (message.products && message.products.length > 0) {
+            content += '<div class="product-carousel"><div class="product-grid">';
+            message.products.forEach(result => {
+                const product = result.product;
+                const imageUrl = (product.images && product.images.length > 0) ? product.images[0].uri : 'https://via.placeholder.com/200';
+                const title = product.title || 'Untitled Product';
+                const detailUrl = `/product/${result.id}`;
+                
+                let priceHtml;
+                if (product.priceInfo && product.priceInfo.price !== null && typeof product.priceInfo.price !== 'undefined') {
+                    priceHtml = `<p class="price">$${product.priceInfo.price.toFixed(2)}</p>`;
+                } else {
+                    priceHtml = `<p class="price price-unavailable">Price not available</p>`;
+                }
+
+                content += `
+                    <div class="product-card">
+                        <a href="${detailUrl}" target="_blank">
+                            <img src="${imageUrl}" alt="${title}">
+                            <h3 class="product-title">${title}</h3>
+                            ${priceHtml}
+                        </a>
+                    </div>
+                `;
+            });
+            content += '</div></div>';
+        }
+        if (message.followup_question) {
+            content += `<p class="followup-question">${message.followup_question}</p>`;
+        }
+        return content;
+    };
+
+    const addMessageToUI = (content, isUser) => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${isUser ? 'user-message' : 'bot-message'}`;
+        messageDiv.innerHTML = content;
+        chatHistory.appendChild(messageDiv);
+        scrollToBottom();
+    };
+
+    const showTypingIndicator = () => {
+        const indicator = document.createElement('div');
+        indicator.className = 'chat-message bot-message typing-indicator';
+        indicator.innerHTML = '<p><span>.</span><span>.</span><span>.</span></p>';
+        indicator.id = 'typing-indicator';
+        chatHistory.appendChild(indicator);
+        scrollToBottom();
+    };
+
+    const removeTypingIndicator = () => {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) indicator.remove();
+    };
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+        addMessageToUI(`<p>${query}</p>`, true);
+        queryInput.value = '';
+        showTypingIndicator();
+
+        try {
+            const response = await fetch(chatForm.action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query, conversation_id: conversationId })
+            });
+
+            removeTypingIndicator();
+            const data = await response.json();
+
+            if (!response.ok) {
+                addMessageToUI(`<p>${data.bot_response.text || 'Sorry, an error occurred.'}</p>`, false);
+                return;
+            }
+
+            conversationId = data.conversation_id;
+            addMessageToUI(renderBotMessage(data.bot_response), false);
+        } catch (error) {
+            removeTypingIndicator();
+            console.error('Chat API error:', error);
+            addMessageToUI('<p>Sorry, I could not connect to the server.</p>', false);
+        }
+    });
+
+    chatHistory.addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('refined-query-button')) {
+            queryInput.value = e.target.dataset.query;
+            chatForm.requestSubmit();
+        }
+    });
+
+    scrollToBottom();
+});
+</script>
 {% endblock %}
