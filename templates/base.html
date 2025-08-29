@@ -29,6 +29,9 @@
                 </form>
             </div>
             <nav>
+                <a href="{{ url_for('chat') }}">
+                    AI Chat
+                </a>
                 <a href="{{ url_for('view_cart') }}">
                     Cart ({{ session.get('cart', {})|length }})
                 </a>

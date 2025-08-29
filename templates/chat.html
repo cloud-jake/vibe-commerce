@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}AI Chat{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-history">
+        {% if not chat_history %}
+            <div class="chat-message bot-message">
+                <p>Welcome to the Vibe Commerce AI assistant! How can I help you find the perfect product today?</p>
+            </div>
+        {% endif %}
+        {% for message in chat_history %}
+            {% if message.is_user %}
+                <div class="chat-message user-message">
+                    <p>{{ message.text }}</p>
+                </div>
+            {% else %}
+                <div class="chat-message bot-message">
+                    {% if message.text %}
+                        <p>{{ message.text | safe }}</p>
+                    {% endif %}
+
+                    {% if message.refined_queries %}
+                        <div class="refined-queries">
+                            <p>You could also try:</p>
+                            {% for refined_query in message.refined_queries %}
+                                <form action="{{ url_for('chat') }}" method="post" style="display: inline;">
+                                    <input type="hidden" name="query" value="{{ refined_query }}">
+                                    <button type="submit" class="refined-query-button">{{ refined_query }}</button>
+                                </form>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if message.products %}
+                        <div class="product-carousel">
+                            <div class="product-grid">
+                                {# The products are stored as dictionaries in the session, so we access keys with dot notation. #}
+                                {# The keys are camelCase (e.g., 'priceInfo') as they come from the .to_dict() conversion. #}
+                                {% for result in message.products %}
+                                    {% set product = result.product %}
+                                    <div class="product-card">
+                                        <a href="{{ url_for('product_detail', product_id=result.id) }}">
+                                            <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}" alt="{{ product.title or 'Untitled Product' }}">
+                                            <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
+                                            {% if product.priceInfo and product.priceInfo.price is defined and product.priceInfo.price is not none %}
+                                                <p class="price">${{ "%.2f"|format(product.priceInfo.price) }}</p>
+                                            {% else %}
+                                                <p class="price price-unavailable">Price not available</p>
+                                            {% endif %}
+                                        </a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if message.followup_question %}
+                        <p class="followup-question">{{ message.followup_question }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <div class="chat-input-area">
+        <form action="{{ url_for('chat') }}" method="post" class="chat-form">
+            <input type="text" name="query" placeholder="Ask me anything about our products..." required autofocus autocomplete="off">
+            <button type="submit">Send</button>
+        </form>
+        <form action="{{ url_for('clear_chat') }}" method="post" class="clear-chat-form">
+            <button type="submit" class="button-secondary">Clear Chat</button>
+        </form>
+    </div>
+</div>
+
+{# The section below incorrectly displays homepage recommendations and should be removed. #}
+{#
+<h2>Recommended For You</h2>
+
+{% if error %}
+    <p class="error">Could not load recommendations: {{ error }}</p>
+{% elif recommendations %}
+    <div class="product-carousel">
+        <div class="product-grid">
+            {% for product in recommendations %}
+                {% include 'product_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+#}
+
+{% endblock %}
