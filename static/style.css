@@ -798,4 +798,78 @@ footer {
     background-color: var(--background-color);
     color: var(--primary-color);
 }
+
+/* --- Responsive Design --- */
+@media (max-width: 820px) { /* A bit wider breakpoint for tablets */
+    .container {
+        width: 95%;
+    }
+
+    /* Header */
+    header .container {
+        flex-wrap: wrap;
+        row-gap: 1rem; /* Add gap between rows when wrapping */
+    }
+
+    header .search-bar {
+        order: 99; /* Force search bar to the last visual line */
+        width: 100%;
+        margin: 0;
+    }
+
+    header .logo {
+        /* On mobile, don't grow the logo; keep it left-aligned next to the hamburger menu. */
+        flex-grow: 0;
+    }
+
+    header nav {
+        margin-left: auto; /* Push cart/login to the far right */
+    }
+
+    /* Search Results Page */
+    .search-results-container {
+        flex-direction: column;
+    }
+
+    .facet-sidebar {
+        max-width: 100%;
+        width: 100%;
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Product Detail Page */
+    .product-detail-container {
+        flex-direction: column;
+    }
+
+    /* Chat Page */
+    .chat-container {
+        height: calc(100vh - 70px); /* Adjust for potential header height */
+        margin: 0;
+        border-radius: 0;
+        max-width: 100%;
+        box-shadow: none;
+    }
+
+    /* About Page */
+    .about-container {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .product-grid {
+        /* Go to 2 columns on small phones */
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .chat-message {
+        max-width: 90%;
+    }
+}
 }
