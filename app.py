@@ -473,12 +473,21 @@ def api_chat():
 
         new_conversation_id = response.conversation_id
 
+        # De-duplicate refined queries while preserving order, as the streaming
+        # API can sometimes send the same suggestions in multiple chunks.
+        unique_refined_queries = []
+        seen_queries = set()
+        for rs in response.refined_search:
+            if rs.query not in seen_queries:
+                unique_refined_queries.append(rs.query)
+                seen_queries.add(rs.query)
+
         # --- Process the response for the template ---
         bot_response = {
             'is_user': False,
             'text': response.conversational_text_response,
             'followup_question': response.followup_question.followup_question if response.followup_question else None,
-            'refined_queries': [rs.query for rs in response.refined_search],
+            'refined_queries': unique_refined_queries,
             'products': []
         }
 
