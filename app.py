@@ -244,15 +244,19 @@ def search():
                 # and build filters like "(price >= 10.00 AND price < 25.00)".
                 # Multiple selected ranges for the same key are ORed together.
                 range_filters = []
+
+                # The API's filter syntax for price is just 'price', not the full path.
+                filter_key = 'price' if key == 'price' else key
+
                 for v in values:
                     try:
                         min_val_str, max_val_str = v.split('-', 1)
                         range_filter_parts = []
                         if min_val_str:
-                            range_filter_parts.append(f'{key} >= {float(min_val_str)}')
+                            range_filter_parts.append(f'{filter_key} >= {float(min_val_str)}')
                         if max_val_str:
                             # The API's interval is exclusive for the maximum.
-                            range_filter_parts.append(f'{key} < {float(max_val_str)}')
+                            range_filter_parts.append(f'{filter_key} < {float(max_val_str)}')
                         if range_filter_parts:
                             range_filters.append(f"({' AND '.join(range_filter_parts)})")
                     except (ValueError, IndexError):

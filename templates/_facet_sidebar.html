@@ -61,8 +61,8 @@
                         {% set facet_display, facet_value_for_url = val.value, val.value %}
                     {% elif val.interval %}
                         {# This is a numerical interval facet. #}
-                        {% set min_val = val.interval.minimum if val.interval.minimum is defined else '' %}
-                        {% set max_val = val.interval.maximum if val.interval.maximum is defined else '' %}
+                        {% set min_val = val.interval.minimum if val.interval.minimum is defined and val.interval.minimum is not none else '' %}
+                        {% set max_val = val.interval.exclusive_maximum if val.interval.exclusive_maximum is defined and val.interval.exclusive_maximum is not none else '' %}
                         {% set facet_value_for_url = '%s-%s'|format(min_val, max_val) %}
 
                         {# Create a user-friendly display string #}
