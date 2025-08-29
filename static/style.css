@@ -287,10 +287,8 @@ main {
 .product-card .product-title {
     font-size: 1.1em;
     margin: 10px 0;
-    /* Ensure long titles don't break the layout */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* Allow title to wrap */
+    white-space: normal;
 }
 
 .product-card .price {
@@ -893,6 +891,17 @@ footer {
     stroke: currentColor; /* Inherit color from the parent link */
 }
 
+/* Divider in hamburger menu */
+.hamburger-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 0.5rem 1.5rem;
+}
+
+.mobile-nav-item {
+    display: none !important; /* Hide by default on desktop */
+}
+
 /* Cart Icon in Header */
 .nav-cart-link {
     display: flex;
@@ -941,7 +950,8 @@ footer {
     }
 
     header nav {
-        margin-left: auto; /* Push cart/login to the far right */
+        /* Hide the main nav on mobile, as its items are now in the hamburger menu */
+        display: none;
     }
 
     /* Search Results Page */
@@ -976,6 +986,11 @@ footer {
     /* About Page */
     .about-container {
         padding: 1.5rem;
+    }
+
+    /* Show mobile-only nav items inside the hamburger dropdown */
+    .hamburger-dropdown .mobile-nav-item {
+        display: flex !important;
     }
 }
 
