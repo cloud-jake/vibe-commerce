@@ -10,7 +10,7 @@ This demo highlights several core features of Vertex AI Search for Commerce:
 
 *   **Site Search:** Experience fast, relevant, and intuitive search results that understand user intent, not just keywords. Includes rich features like faceting and query expansion.
 *   **Product Recommendations:** Discover products tailored to your browsing history and preferences with "Recommended For You" carousels on the homepage.
-*   **Conversational Commerce:** Engage with our AI-powered chat assistant to find products, ask questions, and receive guidance through natural language conversation.
+*   **Conversational Commerce:** Engage with our AI-powered chat assistant, built on the Conversational Search API. This feature understands natural language queries, maintains conversational context, and provides helpful, AI-generated responses. It then uses the context of the conversation to fetch relevant product results, guiding users through their shopping journey.
 
 ## Inspiration
 
