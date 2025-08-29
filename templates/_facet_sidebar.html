@@ -75,12 +75,19 @@
                         {% endif %}
                     {% endif %}
                     {% if facet_display %}
-                        {% set add_args = request.args.to_dict(flat=False) %}
-                        {# Add the new facet value. This handles keys that might already exist. #}
-                        {% set existing_values = add_args.get(facet.key, []) %}
-                        {% set _ = add_args.update({facet.key: existing_values + [facet_value_for_url]}) %}
-                        {% if attribution_token %}{% set _ = add_args.update({'attribution_token': attribution_token}) %}{% endif %}
-                        <li class="facet-item"><a href="{{ url_for('search', **add_args) }}">{{ facet_display }} ({{ val.count }})</a></li>
+                        {% set is_selected = facet_value_for_url in selected_facets.get(facet.key, []) %}
+                        <li class="facet-item {% if is_selected %}selected{% endif %}">
+                            {% if is_selected %}
+                                <span>{{ facet_display }} ({{ val.count }})</span>
+                            {% else %}
+                                {% set add_args = request.args.to_dict(flat=False) %}
+                                {# Add the new facet value. This handles keys that might already exist. #}
+                                {% set existing_values = add_args.get(facet.key, []) %}
+                                {% set _ = add_args.update({facet.key: existing_values + [facet_value_for_url]}) %}
+                                {% if attribution_token %}{% set _ = add_args.update({'attribution_token': attribution_token}) %}{% endif %}
+                                <a href="{{ url_for('search', **add_args) }}">{{ facet_display }} ({{ val.count }})</a>
+                            {% endif %}
+                        </li>
                     {% endif %}
                 {% endfor %}
             </ul>
