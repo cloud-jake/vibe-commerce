@@ -4,7 +4,7 @@ import math
 import traceback
 import uuid
 from authlib.integrations.flask_client import OAuth
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.retail_v2alpha import ConversationalSearchServiceClient
 from google.cloud.retail_v2alpha.types import ConversationalSearchRequest, ConversationalSearchResponse
@@ -695,6 +695,9 @@ def add_to_cart():
 
     # Update total
     session['cart_total'] = sum(item['price'] * item['quantity'] for item in cart.values())
+
+    # Flash a success message to be displayed on the next page
+    flash(f"'{product_title}' has been added to your cart.", 'success')
 
     # Redirect back to the page the user came from for a smoother experience
     return redirect(request.referrer or url_for('index'))
