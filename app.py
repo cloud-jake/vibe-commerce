@@ -167,13 +167,14 @@ def index():
         # Process the results
         for result in response.results:
             if 'product' in result.metadata:
-                # The 'product' in metadata is a Value message containing a Struct.
-                # We need to extract the Struct and convert it to a dict before
-                # parsing it into a Product message. This handles the camelCase to
-                # snake_case conversion of field names.
-                product_struct = result.metadata['product'].struct_value
-                product_dict = json_format.MessageToDict(product_struct)
-                recommendations.append(json_format.ParseDict(product_dict, Product()))
+                # The 'product' in the prediction result metadata is a Struct,
+                # which is represented as a MapComposite in the Python client.
+                # We convert this directly to a dictionary.
+                product_dict = json_format.MessageToDict(result.metadata['product'])
+                # Then, we serialize it to a JSON string to use the `Product.from_json`
+                # helper, which correctly handles field name conversions (e.g., priceInfo -> price_info).
+                product_json_str = json.dumps(product_dict)
+                recommendations.append(Product.from_json(product_json_str))
 
     except (GoogleAPICallError, Exception) as e:
         error = str(e)
@@ -419,20 +420,51 @@ def track_event():
 
 @app.route('/add_to_cart', methods=['POST'])
 def add_to_cart():
-    """Adds a product to the cart stored in the session."""
+    """Adds a product to the cart and tracks the 'add-to-cart' event."""
     product_id = request.form.get('product_id')
     product_title = request.form.get('product_title')
     price_str = request.form.get('product_price')
+    product_image = request.form.get('product_image')
+    attribution_token = request.form.get('attribution_token')
+
     try:
         # More robustly handle conversion from form string to float.
         product_price = float(price_str)
     except (ValueError, TypeError):
         # Default to 0.0 if price is missing, not a valid number, or None.
         product_price = 0.0
-    product_image = request.form.get('product_image')
 
     if not product_id:
         return redirect(url_for('index'))
+
+    # --- Track add-to-cart event on Server-Side for Reliability ---
+    try:
+        parent = user_event_client.catalog_path(
+            project=config.PROJECT_ID,
+            location=config.LOCATION,
+            catalog=config.CATALOG_ID
+        )
+
+        product_details = [{
+            "product": {"id": product_id},
+            "quantity": 1
+        }]
+
+        event_payload = {
+            "eventType": "add-to-cart",
+            "visitorId": session.get('visitor_id'),
+            "productDetails": product_details,
+        }
+        if attribution_token:
+            event_payload["attributionToken"] = attribution_token
+
+        user_event = UserEvent.from_json(json.dumps(event_payload))
+        write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
+        user_event_client.write_user_event(request=write_request)
+        print(f"Successfully wrote server-side event: add-to-cart for visitor {session.get('visitor_id')}")
+    except Exception as e:
+        # Log the error but don't block the user from completing the purchase
+        print(f"Error writing server-side add-to-cart event: {e}\n{traceback.format_exc()}")
 
     # Add item to cart
     cart = session.get('cart', {})
