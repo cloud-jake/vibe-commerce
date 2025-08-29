@@ -485,18 +485,41 @@ def api_chat():
         # If the AI provides refined search queries, fetch products for the first one
         if response.refined_search:
             refined_query = response.refined_search[0].query
+
+            # Define the same facet specifications as the main search page.
+            # This signals to the API that we need rich product data,
+            # which is crucial for getting fields like priceInfo.
+            facet_specs = [
+                SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands")),
+                SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories")),
+                SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="price")),
+                SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="rating")),
+            ]
+
+            # Ensure query expansion is enabled to get full product details,
+            # mirroring the behavior of the main search page. A more basic
+            # request may result in fewer fields being returned.
+            query_expansion_spec = SearchRequest.QueryExpansionSpec(
+                condition=SearchRequest.QueryExpansionSpec.Condition.AUTO,
+                pin_unexpanded_results=True
+            )
+
             search_req = SearchRequest(
                 placement=search_placement,
                 branch=branch_path,
                 query=refined_query,
                 visitor_id=session.get('visitor_id'),
                 page_size=5,
+                query_expansion_spec=query_expansion_spec,
+                facet_specs=facet_specs,
             )
             search_pager = search_client.search(request=search_req)
             
             products_for_session = []
             for r in search_pager.results:
                 product_dict = SearchResponse.SearchResult.to_dict(r)
+                # --- DEBUG --- Print the full product dictionary from the API
+                print(f"DEBUG (Chat API): Product data received: {json.dumps(product_dict, indent=2)}")
                 # The product data is nested inside the 'product' key of the search result.
                 # We can simplify the logic by assigning this dictionary directly.
                 simplified_product = {

@@ -46,20 +46,11 @@ curl -X POST \
   -H "X-Goog-User-Project: ${PROJECT_ID}" \
   "${API_ENDPOINT}" \
   -d '{
-    "query": "weber",
+    "query": "grill",
     "visitorId": "troubleshooting-visitor-id-123",
-    "pageSize": 50,
-    "facetSpecs": [
-      {
-        "facetKey": { "key": "brands", "orderBy": "count desc" }
-      },
-      {
-        "facetKey": { "key": "categories", "orderBy": "count desc" }
-      },
-      {
-        "facetKey": { "key": "colorFamilies", "orderBy": "count desc" }
-      },
-      { "facetKey": { "key": "price" } },
-      { "facetKey": { "key": "rating" } }
-    ]
+    "pageSize": 5,
+    "queryExpansionSpec": {
+      "condition": "AUTO",
+      "pinUnexpandedResults": true
+    }
   }'

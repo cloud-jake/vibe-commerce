@@ -38,11 +38,11 @@
                                 {% for result in message.products %}
                                     {% set product = result.product %}
                                     <div class="product-card">
-                                        <a href="{{ url_for('product_detail', product_id=result.id) }}">
+                                        <a href="{{ url_for('product_detail', product_id=result.id) }}" target="_blank" rel="noopener noreferrer">
                                             <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}" alt="{{ product.title or 'Untitled Product' }}">
                                             <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
-                                            {% if product.priceInfo and product.priceInfo.price is defined and product.priceInfo.price is not none %}
-                                                <p class="price">${{ "%.2f"|format(product.priceInfo.price) }}</p>
+                                            {% if product.price_info and product.price_info.price is defined and product.price_info.price is not none %}
+                                                <p class="price">${{ "%.2f"|format(product.price_info.price) }}</p>
                                             {% else %}
                                                 <p class="price price-unavailable">Price not available</p>
                                             {% endif %}
@@ -108,15 +108,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const detailUrl = `/product/${result.id}`;
                 
                 let priceHtml;
-                if (product.priceInfo && product.priceInfo.price !== null && typeof product.priceInfo.price !== 'undefined') {
-                    priceHtml = `<p class="price">$${product.priceInfo.price.toFixed(2)}</p>`;
+                if (product.price_info && product.price_info.price !== null && typeof product.price_info.price !== 'undefined') {
+                    priceHtml = `<p class="price">$${product.price_info.price.toFixed(2)}</p>`;
                 } else {
                     priceHtml = `<p class="price price-unavailable">Price not available</p>`;
                 }
 
                 content += `
                     <div class="product-card">
-                        <a href="${detailUrl}" target="_blank">
+                        <a href="${detailUrl}" target="_blank" rel="noopener noreferrer">
                             <img src="${imageUrl}" alt="${title}">
                             <h3 class="product-title">${title}</h3>
                             ${priceHtml}
