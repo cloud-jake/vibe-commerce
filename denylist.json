@@ -1,0 +1,14 @@
+[
+  {
+    "description": "The phrase to block from autocomplete suggestions.",
+    "mode": "REQUIRED",
+    "name": "phrase",
+    "type": "STRING"
+  },
+  {
+    "description": "The operator to apply for this phrase. Choose whether to block the exact phrase, or block any suggestions containing this phrase. Supported value \"EXACT_MATCH\", \"CONTAINS\"",
+    "mode": "REQUIRED",
+    "name": "operator",
+    "type": "STRING"
+  }
+]

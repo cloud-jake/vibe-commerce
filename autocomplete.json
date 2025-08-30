@@ -1,0 +1,84 @@
+[
+  {
+    "description": "The suggestion text",
+    "mode": "NULLABLE",
+    "name": "suggestion",
+    "type": "STRING"
+  },
+  {
+    "description": "Global score of this suggestion. Control how this suggestion would be scored / ranked. Only one of this and frequency should be set.",
+    "mode": "NULLABLE",
+    "name": "globalScore",
+    "type": "FLOAT"
+  },
+  {
+    "description": "Frequency of this suggestion. Will be used to rank suggestions when score is not available.",
+    "mode": "NULLABLE",
+    "name": "frequency",
+    "type": "INTEGER"
+  },
+  {
+    "description": "BCP-47 language code of this suggestion.",
+    "mode": "NULLABLE",
+    "name": "languageCode",
+    "type": "STRING"
+  },
+  {
+    "description": "If two suggestions have the same groupID, they will not be returned together. Instead the one ranked higher will be returned. This can be used to deduplicate semantically identical suggestions.",
+    "mode": "NULLABLE",
+    "name": "groupID",
+    "type": "STRING"
+  },
+  {
+    "description": "The score of this suggestion within its group",
+    "mode": "NULLABLE",
+    "name": "groupScore",
+    "type": "FLOAT"
+  },
+  {
+    "description": "Device type for this suggestion.",
+    "mode": "NULLABLE",
+    "name": "deviceType",
+    "type": "STRING"
+  },
+  {
+    "description": "Alternative matching phrases for this suggestion.",
+    "mode": "REPEATED",
+    "name": "alternativePhrases",
+    "type": "STRING"
+  },
+  {
+    "fields": [
+      {
+        "description": "The name of the custom attribute.",
+        "mode": "NULLABLE",
+        "name": "key",
+        "type": "STRING"
+      },
+      {
+        "fields": [
+          {
+            "description": "The textual values of this custom attribute.",
+            "mode": "REPEATED",
+            "name": "text",
+            "type": "STRING"
+          },
+          {
+            "description": "The numerical values of this custom attribute.",
+            "mode": "REPEATED",
+            "name": "numbers",
+            "type": "FLOAT"
+          }
+        ],
+        "mode": "NULLABLE",
+        "name": "value",
+        "type": "RECORD"
+      }
+    ],
+    "description": "A custom attribute that is not explicitly modeled, which can be retrieved together with the suggestion at serving time.",
+    "mode": "REPEATED",
+    "name": "customAttributes",
+    "type": "RECORD"
+  }
+]
+
