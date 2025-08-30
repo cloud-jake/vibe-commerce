@@ -2,7 +2,7 @@
 
 Vibe Commerce is a fictional e-commerce site built to demonstrate the powerful capabilities of **[Google Cloud's Vertex AI Search for Commerce](https://cloud.google.com/solutions/vertex-ai-search-commerce)**. It's designed to illustrate how AI can create a modern, personalized, and intelligent shopping experience from the ground up.
 
-This entire demo site was developed by a single developer with the assistance of **[Gemini Code Assist](https://codeassist.google/)**.
+This entire demo site was developed by a single ~~developer~~ Architect with the assistance of **[Gemini Code Assist](https://codeassist.google/)**.
 
 ## Key Features
 
