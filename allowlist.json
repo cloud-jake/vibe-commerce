@@ -1,0 +1,14 @@
+[
+  {
+    "description": "The phrase to be exempted from autocomplete post processing, e.g. spell correction, filtering",
+    "mode": "REQUIRED",
+    "name": "phrase",
+    "type": "STRING"
+  },
+  {
+    "description": "The operator to apply for this phrase. Whether to match the exact phrase, or any suggestions contain this phrase. Supported values are \"EXACT_MATCH\", \"CONTAINS\".",
+    "mode": "REQUIRED",
+    "name": "operator",
+    "type": "STRING"
+  }
+]
