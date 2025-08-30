@@ -94,13 +94,15 @@ conversational_placement = (
 
 @app.context_processor
 def inject_shared_variables():
-    """Injects variables needed in all templates for event tracking."""
+    """Injects variables needed in all templates."""
     return dict(
         project_id=config.PROJECT_ID,
         catalog_id=config.CATALOG_ID,
         location=config.LOCATION,
         visitor_id=session.get('visitor_id'),
-        user=session.get('user')
+        user=session.get('user'),
+        site_name=config.SITE_NAME,
+        site_logo_url=config.SITE_LOGO_URL,
     )
 
 

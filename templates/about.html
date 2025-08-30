@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}About Vibe Commerce{% endblock %}
+{% block title %}About {{ site_name|default('Vibe Commerce') }}{% endblock %}
 
 {% block content %}
     <div class="about-container">
-        <h1>About Vibe Commerce</h1>
+        <h1>About {{ site_name|default('Vibe Commerce') }}</h1>
         <p class="lead">This is a demo e-commerce site developed completely by vibe-coding with <a href="https://codeassist.google/" target="_blank" rel="noopener noreferrer">Gemini Code Assist</a>.</p>
 
         <h2>Purpose</h2>
-        <p>Vibe Commerce is a fictional e-commerce site built for the express purpose of demonstrating the powerful capabilities of <strong><a href="https://cloud.google.com/solutions/vertex-ai-search-commerce" target="_blank" rel="noopener noreferrer">Google Cloud's Vertex AI Search for Commerce</a></strong>. It's designed to illustrate how AI can create a modern, personalized, and intelligent shopping experience from the ground up.</p>
+        <p>{{ site_name|default('Vibe Commerce') }} is a fictional e-commerce site built for the express purpose of demonstrating the powerful capabilities of <strong><a href="https://cloud.google.com/solutions/vertex-ai-search-commerce" target="_blank" rel="noopener noreferrer">Google Cloud's Vertex AI Search for Commerce</a></strong>. It's designed to illustrate how AI can create a modern, personalized, and intelligent shopping experience from the ground up.</p>
 
         <h2>Key Features</h2>
         <p>This demo highlights several core features of Vertex AI Search for Commerce:</p>
@@ -61,9 +61,9 @@
         </table>
 
         <h2>System Architecture</h2>
-        <p>This diagram illustrates how the different Google Cloud services work together to power the Vibe Commerce application, from offline data preparation to online user interaction.</p>
+        <p>This diagram illustrates how the different Google Cloud services work together to power the {{ site_name|default('Vibe Commerce') }} application, from offline data preparation to online user interaction.</p>
         <div class="architecture-diagram">
-            <img src="{{ url_for('static', filename='vibe-commerce-arch.png') }}" alt="Vibe Commerce System Architecture Diagram">
+            <img src="{{ url_for('static', filename='vibe-commerce-arch.png') }}" alt="{{ site_name|default('Vibe Commerce') }} System Architecture Diagram">
         </div>
 
         <h2>Inspiration</h2>

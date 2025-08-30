@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Vibe Commerce{% endblock %}</title>
+    <title>{% block title %}{{ site_name|default('Vibe Commerce') }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 </head>
@@ -62,7 +62,7 @@
             </div>
             <div class="logo">
                 <a href="{{ url_for('index') }}">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Vibe Commerce Logo">
+                    <img src="{{ site_logo_url|default('/static/logo.png') }}" alt="{{ site_name|default('Vibe Commerce') }} Logo">
                 </a>
             </div>
             <div class="search-bar">

@@ -21,6 +21,8 @@ LOCATION=${LOCATION:-global}
 CATALOG_ID=${CATALOG_ID:-default_catalog}
 SERVING_CONFIG_ID=${SERVING_CONFIG_ID:-default_search}
 RECOMMENDATION_SERVING_CONFIG_ID=${RECOMMENDATION_SERVING_CONFIG_ID:-recently_viewed_default}
+SITE_NAME=${SITE_NAME:-"Vibe Commerce"}
+SITE_LOGO_URL=${SITE_LOGO_URL:-/static/logo.png}
 
 # Validate that all required variables are set
 REQUIRED_VARS=(
@@ -55,6 +57,8 @@ gcloud run deploy vibe-commerce \
   --set-env-vars="RECOMMENDATION_SERVING_CONFIG_ID=${RECOMMENDATION_SERVING_CONFIG_ID}" \
   --set-env-vars="GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" \
   --set-env-vars="GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" \
-  --set-env-vars="SECRET_KEY=${SECRET_KEY}"
+  --set-env-vars="SECRET_KEY=${SECRET_KEY}" \
+  --set-env-vars="SITE_NAME=${SITE_NAME}" \
+  --set-env-vars="SITE_LOGO_URL=${SITE_LOGO_URL}"
 
 echo "Deployment to Cloud Run initiated successfully."
