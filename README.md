@@ -65,6 +65,10 @@ Follow these instructions to get a copy of the project up and running on your lo
 4.  **Configure your environment:**
     Create a `.env` file in the root of the project and add the necessary environment variables for your Google Cloud project, including `PROJECT_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a `SECRET_KEY`.
 
+    You can also add the following optional variables to customize the site's branding:
+    - `SITE_NAME`: An alternate name for the site (default: "Vibe Commerce").
+    - `SITE_LOGO_URL`: A URL for an alternate logo image (default: `/static/logo.png`).
+
 5.  **Authenticate with Google Cloud:**
     Log in with your user credentials for application-default authentication.
     ```bash

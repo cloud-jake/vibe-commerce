@@ -24,6 +24,10 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
+# --- Site Branding Configuration (Optional) ---
+SITE_NAME = os.environ.get("SITE_NAME", "Vibe Commerce")
+SITE_LOGO_URL = os.environ.get("SITE_LOGO_URL", "/static/logo.png")
+
 # --- Validate that all required environment variables are set ---
 # This ensures the application fails fast if configuration is missing.
 REQUIRED_CONFIG = {
