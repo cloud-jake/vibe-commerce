@@ -20,11 +20,25 @@
             <div class="product-info">
                 <h1>{{ product.title or "Product Title Unavailable" }}</h1>
                 <p class="product-id">Product ID: {{ product.id }}</p>
+
                 {% if product.price_info and product.price_info.currency_code %}
-                    <p class="product-price">${{ "%.2f"|format(product.price_info.price) }}</p>
+                    <div class="price-and-cart-container">
+                        <p class="product-price">${{ "%.2f"|format(product.price_info.price) }}</p>
+                        <form action="{{ url_for('add_to_cart') }}" method="post" class="add-to-cart-form">
+                            <input type="hidden" name="product_id" value="{{ product.id }}">
+                            <input type="hidden" name="product_title" value="{{ product.title or 'Untitled Product' }}">
+                            <input type="hidden" name="product_price" value="{{ product.price_info.price }}">
+                            <input type="hidden" name="product_image" value="{{ (product.images[0].uri if product.images) or '' }}">
+                            {% if attribution_token %}
+                                <input type="hidden" name="attribution_token" value="{{ attribution_token }}">
+                            {% endif %}
+                            <button type="submit">Add to Cart</button>
+                        </form>
+                    </div>
                 {% else %}
                     <p class="product-price price-unavailable">Price not available</p>
                 {% endif %}
+
                 <div class="product-description">
                     {{ product.description | safe }}
                 </div>
@@ -70,18 +84,6 @@
                     </div>
                 {% endif %}
 
-                {% if product.price_info and product.price_info.currency_code %}
-                    <form action="{{ url_for('add_to_cart') }}" method="post" class="add-to-cart-form">
-                        <input type="hidden" name="product_id" value="{{ product.id }}">
-                        <input type="hidden" name="product_title" value="{{ product.title or 'Untitled Product' }}">
-                        <input type="hidden" name="product_price" value="{{ product.price_info.price }}">
-                        <input type="hidden" name="product_image" value="{{ (product.images[0].uri if product.images) or '' }}">
-                        {% if attribution_token %}
-                            <input type="hidden" name="attribution_token" value="{{ attribution_token }}">
-                        {% endif %}
-                        <button type="submit">Add to Cart</button>
-                    </form>
-                {% endif %}
             </div>
         </div>
     {% endif %}

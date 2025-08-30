@@ -327,10 +327,18 @@ main {
     flex: 1;
 }
 
+.price-and-cart-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 20px 0;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
 .product-info .product-price {
     font-size: 2em;
     color: var(--success-color);
-    margin: 20px 0;
+    margin: 0; /* Reset margin as it's now handled by the container */
 }
 
 .add-to-cart-form button {
