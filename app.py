@@ -692,12 +692,9 @@ def add_to_cart():
         # Item exists, just increment quantity
         cart[product_id]['quantity'] += 1
     else:
-        # Add new item to cart
+            # Add new item to cart, storing only essential data to keep session small
         cart[product_id] = {
-            'id': product_id,
-            'title': product_title,
             'price': product_price,
-            'image': product_image,
             'quantity': 1
         }
     session['cart'] = cart
@@ -716,7 +713,40 @@ def add_to_cart():
 @app.route('/cart')
 def view_cart():
     """Displays the shopping cart."""
-    return render_template('cart.html', cart=session.get('cart', {}), total=session.get('cart_total', 0.0), event_type='shopping-cart-page-view')
+    cart_from_session = session.get('cart', {})
+    total = session.get('cart_total', 0.0)
+
+    if not cart_from_session:
+        return render_template('cart.html', cart={}, total=total, event_type='shopping-cart-page-view')
+
+    rich_cart_items = {}
+    for product_id, item_data in cart_from_session.items():
+        try:
+            product_name = product_client.product_path(
+                project=config.PROJECT_ID,
+                location=config.LOCATION,
+                catalog=config.CATALOG_ID,
+                branch="default_branch",
+                product=product_id
+            )
+            product = product_client.get_product(name=product_name)
+
+            rich_cart_items[product_id] = {
+                'id': product.id,
+                'title': product.title,
+                'image': product.images[0].uri if product.images else '',
+                'price': item_data['price'],
+                'quantity': item_data['quantity']
+            }
+        except Exception as e:
+            print(f"Error fetching product {product_id} for cart view: {e}")
+            # If a product can't be fetched, we'll still show it with basic info.
+            rich_cart_items[product_id] = {
+                'id': product_id, 'title': 'Product not available', 'image': '',
+                'price': item_data['price'], 'quantity': item_data['quantity']
+            }
+
+    return render_template('cart.html', cart=rich_cart_items, total=total, event_type='shopping-cart-page-view')
 
 
 @app.route('/remove_from_cart/<product_id>', methods=['POST'])
@@ -734,10 +764,31 @@ def remove_from_cart(product_id):
 @app.route('/checkout', methods=['POST'])
 def checkout():
     """Simulates checkout, tracks the purchase event, and redirects to a confirmation page."""
-    cart_at_checkout = list(session.get('cart', {}).values())
+    cart_from_session = session.get('cart', {})
     total_at_checkout = session.get('cart_total', 0.0)
     transaction_id = str(uuid.uuid4())
     visitor_id = session.get('visitor_id')
+
+    # We need to enrich the cart items with titles for the confirmation page.
+    cart_at_checkout = []
+    if cart_from_session:
+        for product_id, item_data in cart_from_session.items():
+            try:
+                product_name = product_client.product_path(
+                    project=config.PROJECT_ID, location=config.LOCATION,
+                    catalog=config.CATALOG_ID, branch="default_branch", product=product_id
+                )
+                product = product_client.get_product(name=product_name)
+                cart_at_checkout.append({
+                    'id': product_id,
+                    'title': product.title,
+                    'quantity': item_data['quantity']
+                })
+            except Exception as e:
+                print(f"Error fetching product {product_id} for checkout: {e}")
+                cart_at_checkout.append({
+                    'id': product_id, 'title': 'Unknown Product', 'quantity': item_data['quantity']
+                })
 
     # --- Track Purchase Event on Server-Side for Reliability ---
     if cart_at_checkout: # Only track if there was something in the cart
