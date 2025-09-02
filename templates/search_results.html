@@ -51,5 +51,27 @@
             const attributionToken = {{ search_event_attribution_token|tojson|safe }};
             VibeTracker.trackSearchView(query, searchResults, attributionToken);
         </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // Facet collapse/expand logic
+                const facetToggles = document.querySelectorAll('.facet-toggle');
+
+                facetToggles.forEach(toggle => {
+                    const content = document.getElementById(toggle.getAttribute('aria-controls'));
+
+                    toggle.addEventListener('click', () => {
+                        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                        toggle.setAttribute('aria-expanded', !isExpanded);
+                        content.classList.toggle('is-collapsed');
+
+                        if (content.classList.contains('is-collapsed')) {
+                            content.style.maxHeight = null;
+                        } else {
+                            content.style.maxHeight = content.scrollHeight + 'px';
+                        }
+                    });
+                });
+            });
+        </script>
     {% endif %}
 {% endblock %}

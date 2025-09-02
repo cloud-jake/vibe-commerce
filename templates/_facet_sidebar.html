@@ -44,7 +44,7 @@
     <h4>Refine By</h4>
     {# Loop through facets, but only those that have values to display. #}
     {% for facet in facets if facet.values %}
-        <div class="facet-group">
+        <div class="facet-group collapsible">
             {# Generate a user-friendly display name if one isn't provided by the API #}
             {% set display_name = facet.display_name %}
             {% if not display_name and facet.key.startswith('attributes.') %}
@@ -52,8 +52,12 @@
             {% elif not display_name %}
                 {% set display_name = facet.key|replace('_', ' ')|title %}
             {% endif %}
-            <h5>{{ display_name }}</h5>
-            <ul>
+            <button type="button" class="facet-toggle" aria-expanded="false" aria-controls="facet-values-{{ loop.index }}">
+                <span>{{ display_name }}</span>
+                <svg class="facet-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="facet-values-container is-collapsed" id="facet-values-{{ loop.index }}">
+                <ul>
                 {% for val in facet.values %}
                     {% set facet_display, facet_value_for_url = '', '' %}
                     {% if val.value %}
@@ -91,6 +95,7 @@
                     {% endif %}
                 {% endfor %}
             </ul>
+            </div>
         </div>
     {% else %}
         {# This block renders if the 'facets' list is empty or no facets have values. #}
