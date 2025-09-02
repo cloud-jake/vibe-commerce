@@ -53,18 +53,30 @@ header .logo img {
 
 header .search-bar {
     flex-grow: 1;
-    margin: 0 40px;
+    margin: 0 20px; /* Reduced margin slightly */
+    /* The form is now the only direct child */
 }
 
 header .search-bar form {
     display: flex;
+    flex-grow: 1; /* Make form take available space */
     position: relative; /* For positioning the autocomplete suggestions */
+}
+
+/* New wrapper for input and mic button */
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    flex-grow: 1;
 }
 
 header .search-bar input[type="search"] {
     width: 100%;
     padding: 10px;
+    padding-right: 45px; /* Make space for the mic icon */
     border: 1px solid var(--border-color);
+    /* The search button will have the right border now */
+    border-right: none;
     border-radius: 5px 0 0 5px;
     font-size: 1em;
 }
@@ -80,6 +92,21 @@ header .search-bar button {
 }
 header .search-bar button:hover {
     opacity: 0.9;
+}
+
+/* Style for the mic button specifically inside the header search bar */
+header .search-bar .mic-button {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    z-index: 2; /* Ensure it's above the input field */
+    color: #555; /* Set the default icon color to gray */
 }
  
 header nav a {
@@ -718,7 +745,7 @@ footer {
 .mic-button {
     background: none;
     border: 1px solid #ccc;
-    border-radius: 50%;
+    border-radius: 50%; /* This is for the circular buttons on the chat page */
     width: 40px;
     height: 40px;
     display: flex;
