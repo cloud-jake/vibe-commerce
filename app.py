@@ -530,7 +530,7 @@ def api_chat():
             for r in search_pager.results:
                 product_dict = SearchResponse.SearchResult.to_dict(r)
                 # --- DEBUG --- Print the full product dictionary from the API
-                print(f"DEBUG (Chat API): Product data received: {json.dumps(product_dict, indent=2)}")
+                ## print(f"DEBUG (Chat API): Product data received: {json.dumps(product_dict, indent=2)}")
                 # The product data is nested inside the 'product' key of the search result.
                 # We can simplify the logic by assigning this dictionary directly.
                 simplified_product = {
