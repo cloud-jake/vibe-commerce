@@ -715,6 +715,40 @@ footer {
     background-color: #e9ecef;
 }
 
+.mic-button {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #555;
+    transition: all 0.2s ease-in-out;
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+.mic-button:hover {
+    background-color: #e9ecef;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.mic-button.is-listening {
+    background-color: var(--primary-color);
+    color: var(--surface-color);
+    border-color: var(--primary-color);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+}
+
 /* Typing indicator animation */
 .typing-indicator p {
     display: flex;
