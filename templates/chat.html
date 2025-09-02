@@ -101,6 +101,9 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
         </form>
+        <button type="button" id="mic-button" class="mic-button" title="Speak your query">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        </button>
         <form action="{{ url_for('clear_chat') }}" method="post" class="clear-chat-form">
             <button type="submit">Clear Chat</button>
         </form>
@@ -246,6 +249,47 @@ document.addEventListener('DOMContentLoaded', () => {
             chatForm.requestSubmit();
         }
     });
+
+    // --- Speech Recognition Logic ---
+    const micButton = document.getElementById('mic-button');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition && micButton) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false; // Stop listening after a pause
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        micButton.addEventListener('click', () => {
+            recognition.start();
+            micButton.classList.add('is-listening');
+            queryInput.placeholder = 'Listening...';
+        });
+
+        recognition.onresult = (event) => {
+            const speechResult = event.results[0][0].transcript;
+            queryInput.value = speechResult;
+            // Automatically submit the form after successful recognition
+            chatForm.requestSubmit();
+        };
+
+        recognition.onspeechend = () => {
+            recognition.stop();
+            micButton.classList.remove('is-listening');
+            queryInput.placeholder = 'Ask me anything about our products...';
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            micButton.classList.remove('is-listening');
+            queryInput.placeholder = 'Sorry, I could not hear you. Please try again.';
+        };
+    } else if (micButton) {
+        // Hide the button if the browser doesn't support the API
+        micButton.style.display = 'none';
+        console.warn('Speech Recognition API not supported in this browser.');
+    }
 
     scrollToBottom();
 });
