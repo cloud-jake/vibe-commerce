@@ -520,7 +520,7 @@ def api_chat():
                 branch=branch_path,
                 query=refined_query,
                 visitor_id=session.get('visitor_id'),
-                page_size=5,
+                page_size=3,
                 query_expansion_spec=query_expansion_spec,
                 facet_specs=facet_specs,
             )
