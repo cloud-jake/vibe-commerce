@@ -66,8 +66,13 @@
                 </a>
             </div>
             <div class="search-bar">
-                <form action="{{ url_for('search') }}" method="get">
-                    <input type="search" name="query" placeholder="Search for products..." value="{{ query or '' }}" required minlength="2">
+                <form action="{{ url_for('search') }}" method="get" id="main-search-form">
+                    <div class="search-input-wrapper">
+                        <input type="search" name="query" placeholder="Search for products..." value="{{ query or '' }}" required minlength="2">
+                        <button type="button" id="main-mic-button" class="mic-button" title="Speak your query">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                        </button>
+                    </div>
                     {# If we are on a search results page and expansion was disabled, keep it disabled for the next search #}
                     {% if use_expansion is defined and not use_expansion %}
                         <input type="hidden" name="expand" value="false">
@@ -142,6 +147,50 @@
         }
     </script>
     {% block scripts %}{% endblock %}
+    <script>
+        // --- Speech Recognition for Main Search Bar ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainMicButton = document.getElementById('main-mic-button');
+            const mainSearchForm = document.getElementById('main-search-form');
+            if (!mainSearchForm) return; // Don't run if the form isn't on the page
+            const mainQueryInput = mainSearchForm.querySelector('input[name="query"]');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (SpeechRecognition && mainMicButton) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                mainMicButton.addEventListener('click', () => {
+                    recognition.start();
+                    mainMicButton.classList.add('is-listening');
+                    mainQueryInput.placeholder = 'Listening...';
+                });
+
+                recognition.onresult = (event) => {
+                    const speechResult = event.results[0][0].transcript;
+                    mainQueryInput.value = speechResult;
+                    mainSearchForm.requestSubmit();
+                };
+
+                recognition.onspeechend = () => {
+                    recognition.stop();
+                    mainMicButton.classList.remove('is-listening');
+                    mainQueryInput.placeholder = 'Search for products...';
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    mainMicButton.classList.remove('is-listening');
+                    mainQueryInput.placeholder = 'Could not hear you. Please try again.';
+                };
+            } else if (mainMicButton) {
+                mainMicButton.style.display = 'none';
+            }
+        });
+    </script>
     <script>
         // --- Autocomplete Logic ---
         const searchInput = document.querySelector('.search-bar input[name="query"]');
