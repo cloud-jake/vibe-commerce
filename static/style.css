@@ -233,6 +233,49 @@ main {
     color: var(--primary-color);
 }
 
+.facet-group.collapsible {
+    border-bottom: 1px solid var(--border-color);
+}
+.facet-group.collapsible:last-of-type {
+    border-bottom: none;
+}
+
+.facet-toggle {
+    background: none;
+    border: none;
+    padding: 0.75rem 0;
+    width: 100%;
+    text-align: left;
+    font-size: 1em; /* Match h5 style */
+    font-weight: bold; /* Match h5 style */
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.facet-toggle-icon {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease-in-out;
+    stroke: currentColor;
+}
+
+.facet-toggle[aria-expanded="true"] .facet-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.facet-values-container {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.facet-values-container.is-collapsed {
+    max-height: 0;
+}
+
 /* Pagination */
 .pagination {
     margin-top: 2rem;
