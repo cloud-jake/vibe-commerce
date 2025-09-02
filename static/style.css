@@ -334,7 +334,7 @@ main {
     border: 1px solid var(--border-color);
     border-radius: 5px;
     text-align: center;
-    padding: 15px;
+    padding: 10px;
     transition: box-shadow 0.3s ease;
 }
 
@@ -351,7 +351,7 @@ main {
     max-width: 100%;
     height: 200px;
     object-fit: contain;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .product-card .product-title {
@@ -580,11 +580,11 @@ footer {
 /* --- Chat Page Styles --- */
 
 .chat-container {
-    max-width: 800px;
-    margin: 2rem auto;
+    max-width: 100%;
+    margin: 0;
     background-color: var(--surface-color);
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    border-radius: 0;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     height: 80vh; /* Make it take up most of the viewport height */
@@ -619,6 +619,8 @@ footer {
     border-bottom-right-radius: 4px;
     padding: 12px 18px;
     word-wrap: break-word; /* Prevent long text from overflowing */
+    /* Add word-break to handle long strings without spaces */
+    word-break: break-all;
 }
 
 .bot-message {
@@ -651,17 +653,27 @@ footer {
     padding: 1rem 0 0 0;
 }
 
+.bot-message .product-carousel .product-grid {
+    gap: 10px;
+}
+
 /* Make product cards in chat smaller */
 .bot-message .product-card {
-    width: 180px;
+    width: 140px;
 }
 
 .bot-message .product-card img {
-    height: 150px;
+    height: 100px;
 }
 
 .bot-message .product-card .product-title {
-    font-size: 1em;
+    font-size: 0.9em;
+    margin: 8px 0; /* Reduce vertical margin */
+}
+
+.bot-message .product-card .price {
+    font-size: 1em; /* Reduce price font size from inherited 1.2em */
+    margin-bottom: 0; /* Remove bottom margin for compactness */
 }
 
 .bot-message .product-carousel .product-card {
@@ -675,10 +687,12 @@ footer {
     border-radius: 18px;
     border-bottom-left-radius: 4px;
     word-wrap: break-word; /* Prevent long text from overflowing */
+    min-width: 0; /* Prevents the content from overflowing its flex container */
 }
 
 .refined-queries {
-    margin-top: 1rem;
+    margin-top: .5rem;
+    margin-bottom: .5rem; /* Add space below the suggestion buttons */
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -688,7 +702,7 @@ footer {
     width: 100%;
     font-size: 0.9em;
     color: #555;
-    margin-bottom: 4px;
+    margin-bottom: 0;
 }
 
 .refined-query-button {
@@ -740,13 +754,17 @@ footer {
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-.chat-form input[type="text"] {
+.chat-form textarea {
     flex-grow: 1;
     border: none;
     outline: none;
     padding: 8px 15px;
     font-size: 1em;
     background: transparent;
+    resize: none; /* Disable manual resizing */
+    overflow-y: hidden; /* Hide scrollbar until max-height is reached */
+    font-family: inherit; /* Ensure font matches the rest of the site */
+    line-height: 1.5; /* Improve readability for multi-line text */
 }
 
 .chat-form button {

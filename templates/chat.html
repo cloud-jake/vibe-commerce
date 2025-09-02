@@ -54,15 +54,6 @@
                             <p>{{ message.text | safe }}</p>
                         {% endif %}
 
-                        {% if message.refined_queries %}
-                            <div class="refined-queries">
-                                <p>You could also try:</p>
-                                {% for refined_query in message.refined_queries %}
-                                    <button type="button" class="refined-query-button" data-query="{{ refined_query }}">{{ refined_query }}</button>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
                         {% if message.products %}
                             <div class="product-carousel">
                                 <div class="product-grid">
@@ -86,6 +77,15 @@
                             </div>
                         {% endif %}
 
+                        {% if message.refined_queries %}
+                            <div class="refined-queries">
+                                <p>You could also try:</p>
+                                {% for refined_query in message.refined_queries %}
+                                    <button type="button" class="refined-query-button" data-query="{{ refined_query }}">{{ refined_query }}</button>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
                         {% if message.followup_question %}
                             <p class="followup-question">{{ message.followup_question }}</p>
                         {% endif %}
@@ -96,7 +96,7 @@
     </div>
     <div class="chat-input-area">
         <form action="{{ url_for('api_chat') }}" method="post" class="chat-form" id="chat-form">
-            <input type="text" name="query" placeholder="Ask me anything about our products..." required autofocus autocomplete="off">
+            <textarea name="query" id="query-input" placeholder="Ask me anything about our products..." required autofocus autocomplete="off" rows="1"></textarea>
             <button type="submit" title="Send">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
@@ -116,9 +116,29 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const chatForm = document.getElementById('chat-form');
-    const queryInput = chatForm.querySelector('input[name="query"]');
+    const queryInput = document.getElementById('query-input');
     const chatHistory = document.getElementById('chat-history');
     let conversationId = '{{ conversation_id }}'; // Get initial ID from Flask
+
+    // --- Auto-resize textarea ---
+    const adjustTextareaHeight = () => {
+        queryInput.style.height = 'auto'; // Reset height to calculate scrollHeight correctly
+        const maxHeight = 150; // Max height in pixels
+        const newHeight = Math.min(queryInput.scrollHeight, maxHeight);
+        queryInput.style.height = `${newHeight}px`;
+        // Show scrollbar only when max height is reached
+        queryInput.style.overflowY = (queryInput.scrollHeight > maxHeight) ? 'auto' : 'hidden';
+    };
+
+    queryInput.addEventListener('input', adjustTextareaHeight);
+
+    // --- Handle Enter to submit, Shift+Enter for new line ---
+    queryInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // Prevent new line
+            chatForm.requestSubmit();
+        }
+    });
 
     const scrollToBottom = () => {
         chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -147,13 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (message.text) {
             contentHtml += `<p>${message.text}</p>`;
         }
-        if (message.refined_queries && message.refined_queries.length > 0) {
-            contentHtml += '<div class="refined-queries"><p>You could also try:</p>';
-            message.refined_queries.forEach(q => {
-                contentHtml += `<button type="button" class="refined-query-button" data-query="${q}">${q}</button>`;
-            });
-            contentHtml += '</div>';
-        }
         if (message.products && message.products.length > 0) {
             contentHtml += '<div class="product-carousel"><div class="product-grid">';
             message.products.forEach(result => {
@@ -181,6 +194,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             contentHtml += '</div></div>';
         }
+        if (message.refined_queries && message.refined_queries.length > 0) {
+            contentHtml += '<div class="refined-queries"><p>You could also try:</p>';
+            message.refined_queries.forEach(q => {
+                contentHtml += `<button type="button" class="refined-query-button" data-query="${q}">${q}</button>`;
+            });
+            contentHtml += '</div>';
+        }
         if (message.followup_question) {
             contentHtml += `<p class="followup-question">${message.followup_question}</p>`;
         }
@@ -193,7 +213,12 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.className = `chat-message ${isUser ? 'user-message' : 'bot-message'}`;
         messageDiv.innerHTML = content;
         chatHistory.appendChild(messageDiv);
-        scrollToBottom();
+        if (isUser) {
+            scrollToBottom();
+        } else {
+            // For bot messages, scroll to the top of the new message so the user sees it.
+            messageDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     };
 
     const showTypingIndicator = () => {
@@ -217,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addMessageToUI(`<p>${query}</p>`, true);
         queryInput.value = '';
+        adjustTextareaHeight(); // Reset textarea height after submit
         showTypingIndicator();
 
         try {
@@ -246,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chatHistory.addEventListener('click', (e) => {
         if (e.target && e.target.classList.contains('refined-query-button')) {
             queryInput.value = e.target.dataset.query;
+            adjustTextareaHeight(); // Adjust height for the new content
             chatForm.requestSubmit();
         }
     });
@@ -270,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.onresult = (event) => {
             const speechResult = event.results[0][0].transcript;
             queryInput.value = speechResult;
+            adjustTextareaHeight(); // Adjust height for the new content
             // Automatically submit the form after successful recognition
             chatForm.requestSubmit();
         };
