@@ -22,6 +22,7 @@ instance/
 
 # Python virtual environment
 venv/
+.python-version
 
 # IDE and OS files
 .idea/
