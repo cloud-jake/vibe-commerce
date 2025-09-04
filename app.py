@@ -214,6 +214,119 @@ def about():
     return render_template('about.html')
 
 
+@app.route('/categories')
+def categories_list():
+    """Displays a list of all product categories."""
+    try:
+        # Perform a search with an empty query and a facet spec for categories.
+        # This is an efficient pattern to populate a category listing page.
+        facet_spec = SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc")
+        )
+
+        branch_path = SearchServiceClient.branch_path(
+            project=config.PROJECT_ID,
+            location=config.LOCATION,
+            catalog=config.CATALOG_ID,
+            branch="default_branch"
+        )
+
+        search_request = SearchRequest(
+            placement=search_placement,
+            branch=branch_path,
+            query="", # Empty query
+            visitor_id=session.get('visitor_id'),
+            page_size=0, # We only need the facets, not the results
+            facet_specs=[facet_spec],
+        )
+
+        search_pager = search_client.search(search_request)
+        search_response = next(search_pager.pages)
+
+        # The first (and only) facet in the response will be our categories
+        category_facet = search_response.facets[0] if search_response.facets else None
+
+        return render_template('categories.html', category_facet=category_facet, error=None)
+
+    except Exception as e:
+        print(f"Error fetching category list: {e}\n{traceback.format_exc()}")
+        return render_template('categories.html', error=str(e), category_facet=None)
+
+
+@app.route('/browse/<path:category_name>')
+def browse_category(category_name):
+    """
+    Performs a browse search for a specific category using Vertex AI Search.
+    This is characterized by an empty query and a specified page_categories field.
+    """
+    try:
+        page = int(request.args.get('page', 1))
+    except (ValueError, TypeError):
+        page = 1
+    if page < 1:
+        page = 1
+
+    page_size = 20
+    offset = (page - 1) * page_size
+
+    # --- Handle Facets ---
+    # For a browse request, the primary filter is the category itself.
+    # Additional filters from user interaction are ANDed with it.
+    facet_filters = [f'categories: ANY("{category_name}")']
+    selected_facets = {}
+    processed_keys = {'page'}
+
+    for key in request.args:
+        if key not in processed_keys:
+            values = request.args.getlist(key)
+            selected_facets[key] = values
+            # This logic is similar to the main search page for consistency
+            if key in ['price', 'rating']:
+                range_filters = []
+                filter_key = 'price' if key == 'price' else key
+                for v in values:
+                    try:
+                        min_val_str, max_val_str = v.split('-', 1)
+                        range_filter_parts = []
+                        if min_val_str: range_filter_parts.append(f'{filter_key} >= {float(min_val_str)}')
+                        if max_val_str: range_filter_parts.append(f'{filter_key} < {float(max_val_str)}')
+                        if range_filter_parts: range_filters.append(f"({' AND '.join(range_filter_parts)})")
+                    except (ValueError, IndexError): continue
+                if range_filters: facet_filters.append(f"({' OR '.join(range_filters)})")
+            else:
+                filter_values = ', '.join([f'"{v}"' for v in values])
+                facet_filters.append(f'{key}: ANY({filter_values})')
+            processed_keys.add(key)
+
+    search_filter = " AND ".join(facet_filters)
+
+    # --- Build Search Request for BROWSE ---
+    facet_specs = [
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc")),
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc")),
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc")),
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="price")),
+        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="rating")),
+    ]
+    branch_path = SearchServiceClient.branch_path(project=config.PROJECT_ID, location=config.LOCATION, catalog=config.CATALOG_ID, branch="default_branch")
+
+    search_request = SearchRequest(
+        placement=search_placement, branch=branch_path, query="", page_categories=[category_name],
+        visitor_id=session.get('visitor_id'), page_size=page_size, offset=offset,
+        facet_specs=facet_specs, filter=search_filter,
+    )
+
+    try:
+        search_pager = search_client.search(search_request)
+        search_response = next(search_pager.pages)
+        total_pages = int(math.ceil(search_response.total_size / page_size)) if search_response.total_size > 0 else 0
+        results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
+        page_categories_json = json.dumps([category_name])
+        return render_template('browse_results.html', results=search_response.results, facets=search_response.facets, selected_facets=selected_facets, results_json=results_for_js, category_name=category_name, event_type='search', page_categories_json=page_categories_json, current_page=page, total_pages=total_pages, total_results=search_response.total_size, page_size=page_size, attribution_token=search_response.attribution_token)
+    except Exception as e:
+        print(f"Error during browse search for category '{category_name}': {e}\n{traceback.format_exc()}")
+        return render_template('browse_results.html', error=str(e), category_name=category_name, event_type='search', facets=[], selected_facets={}, current_page=1, total_pages=0, total_results=0)
+
 @app.route('/search')
 def search():
     """

@@ -23,6 +23,15 @@
                         </svg>
                         <span>Home</span>
                     </a>
+                    <a href="{{ url_for('categories_list') }}" class="nav-link-with-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                        </svg>
+                        <span>Categories</span>
+                    </a>
                     <a href="{{ url_for('chat') }}" class="nav-link-with-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M14.5 7.5l-1-1-1 1"></path><path d="M12 11.5l-1-1-1 1"></path><path d="M9.5 7.5l1 1 1-1"></path>
@@ -147,6 +156,27 @@
         }
     </script>
     {% block scripts %}{% endblock %}
+    <script>
+        // --- Facet Collapse/Expand Logic ---
+        // This is used on both search and browse pages.
+        document.addEventListener('DOMContentLoaded', () => {
+            // Use event delegation for dynamically added content
+            document.body.addEventListener('click', (e) => {
+                const toggle = e.target.closest('.facet-toggle');
+                if (toggle) {
+                    const content = document.getElementById(toggle.getAttribute('aria-controls'));
+                    if (content) {
+                        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                        toggle.setAttribute('aria-expanded', !isExpanded);
+                        content.classList.toggle('is-collapsed');
+
+                        // Animate the max-height for smooth transition
+                        content.style.maxHeight = content.classList.contains('is-collapsed') ? null : content.scrollHeight + 'px';
+                    }
+                }
+            });
+        });
+    </script>
     <script>
         // --- Speech Recognition for Main Search Bar ---
         document.addEventListener('DOMContentLoaded', () => {

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_macros.html' import render_product_card, render_facets, render_pagination %}
 
 {% block title %}Search Results for "{{ query }}"{% endblock %}
 
@@ -11,7 +12,7 @@
 
     <div class="search-results-container">
         <aside class="facet-sidebar">
-            {% include '_facet_sidebar.html' %}
+            {{ render_facets(facets, selected_facets, request.path, request.args, attribution_token, query=query) }}
         </aside>
 
         <div class="search-results-grid">
@@ -22,20 +23,11 @@
                 <div class="product-grid">
                     {% for result in results %}
                         <div class="product-card">
-                            <a href="{{ url_for('product_detail', product_id=result.id, attribution_token=attribution_token) }}">
-                                <img src="{{ (result.product.images[0].uri if result.product.images) or 'https://prd.place/400?id=' ~ result.id }}" alt="{{ result.product.title or 'Untitled Product' }}">
-                                <h3 class="product-title">{{ result.product.title or "Untitled Product" }}</h3>
-                                <p class="product-id-debug">ID: {{ result.id }}</p>
-                                {% if result.product.price_info and result.product.price_info.price is defined and result.product.price_info.price is not none %}
-                                    <p class="price">${{ "%.2f"|format(result.product.price_info.price) }}</p>
-                                {% else %}
-                                    <p class="price price-unavailable">Price not available</p>
-                                {% endif %}
-                            </a>
+                            {{ render_product_card(result, attribution_token) }}
                         </div>
                     {% endfor %}
                 </div>
-                {% include '_pagination.html' %}
+                {{ render_pagination(current_page, total_pages, total_results, page_size, results|length, request.path, request.args, attribution_token) }}
             {% else %}
                 <p>No products found for your query.</p>
             {% endif %}
@@ -50,28 +42,6 @@
             const query = {{ query|tojson|safe }};
             const attributionToken = {{ search_event_attribution_token|tojson|safe }};
             VibeTracker.trackSearchView(query, searchResults, attributionToken);
-        </script>
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                // Facet collapse/expand logic
-                const facetToggles = document.querySelectorAll('.facet-toggle');
-
-                facetToggles.forEach(toggle => {
-                    const content = document.getElementById(toggle.getAttribute('aria-controls'));
-
-                    toggle.addEventListener('click', () => {
-                        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-                        toggle.setAttribute('aria-expanded', !isExpanded);
-                        content.classList.toggle('is-collapsed');
-
-                        if (content.classList.contains('is-collapsed')) {
-                            content.style.maxHeight = null;
-                        } else {
-                            content.style.maxHeight = content.scrollHeight + 'px';
-                        }
-                    });
-                });
-            });
         </script>
     {% endif %}
 {% endblock %}

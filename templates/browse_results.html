@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from '_macros.html' import render_product_card, render_facets, render_pagination %}
+
+{% block title %}Browse: {{ category_name }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Facet Sidebar -->
+        <div class="col-lg-3">
+            <h4>Refine By</h4>
+            {{ render_facets(facets, selected_facets, request.path, request.args, attribution_token) }}
+        </div>
+
+        <!-- Browse Results -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h1 class="h3">Browsing: {{ category_name }}</h1>
+                    <p class="text-muted">
+                        Showing {{ results|length }} of {{ "{:,}".format(total_results) }} results.
+                    </p>
+                </div>
+            </div>
+
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% elif results %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+                    {% for result in results %}
+                        <div class="col">
+                            {{ render_product_card(result, attribution_token) }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {{ render_pagination(current_page, total_pages, total_results, page_size, results|length, request.path, request.args, attribution_token) }}
+
+            {% else %}
+                <div class="text-center py-5">
+                    <h4>No products found in this category.</h4>
+                    <p>Try removing some filters to see more results.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // A browse event is a type of 'search' event with an empty 'searchQuery' and a populated 'pageCategories'.
+    const eventPayload = { eventType: '{{ event_type }}', visitorId: '{{ visitor_id }}', searchQuery: '', pageCategories: {{ page_categories_json | safe }}, attributionToken: '{{ attribution_token }}', productDetails: {{ results_json | tojson | safe }}.map(r => ({ product: { id: r.id }, quantity: 1 })) };
+    trackEvent(eventPayload);
+});
+</script>
+{% endblock %}

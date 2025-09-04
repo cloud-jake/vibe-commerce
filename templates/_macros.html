@@ -1,0 +1,122 @@
+{#
+    This file contains reusable macros for rendering common components
+    like product cards, facet sidebars, and pagination.
+#}
+
+{% macro render_product_card(result, attribution_token) %}
+<div class="product-card">
+    {# The result object is a SearchResult, which has .id and .product #}
+    <a href="{{ url_for('product_detail', product_id=result.id, attribution_token=attribution_token) }}">
+        <img src="{{ (result.product.images[0].uri if result.product.images) or 'https://prd.place/400?id=' ~ result.id }}" alt="{{ result.product.title or 'Untitled Product' }}">
+        <h3 class="product-title">{{ result.product.title or "Untitled Product" }}</h3>
+        {% if result.product.price_info and result.product.price_info.price is defined and result.product.price_info.price is not none %}
+            <p class="price">${{ "%.2f"|format(result.product.price_info.price) }}</p>
+        {% else %}
+            <p class="price price-unavailable">Price not available</p>
+        {% endif %}
+    </a>
+</div>
+{% endmacro %}
+
+
+{% macro render_facets(facets, selected_facets, request_path, request_args, attribution_token, query=None) %}
+{#
+    Renders the facet sidebar for search/browse results.
+    - request_path: The base path for the links (e.g., /search or /browse/category-name)
+    - request_args: The current query parameters.
+#}
+<div class="applied-filters">
+    <h4>Applied Filters</h4>
+    {% if selected_facets %}
+        <ul>
+        {% for key, values in selected_facets.items() %}
+            {% for value in values %}
+                <li class="applied-filter-tag">
+                    {% set display_value = value %}
+                    {% if (key == 'price' or key == 'rating') and '-' in value %}
+                        {% set parts = value.split('-') %}
+                        {% set min_val, max_val = parts[0], parts[1] %}
+                        {% if key == 'price' %}
+                            {% if min_val and max_val %}{% set display_value = '$' ~ min_val ~ ' - $' ~ max_val %}{% elif min_val %}{% set display_value = '$' ~ min_val ~ '+' %}{% else %}{% set display_value = 'Up to $' ~ max_val %}{% endif %}
+                        {% else %}
+                            {% if min_val and max_val %}{% set display_value = min_val ~ ' - ' ~ max_val %}{% elif min_val %}{% set display_value = min_val ~ '+' %}{% else %}{% set display_value = 'Up to ' ~ max_val %}{% endif %}
+                        {% endif %}
+                    {% endif %}
+                    {{ display_value }}
+                    {# Logic to create a URL to remove this specific facet value #}
+                    {% set new_args = request_args.to_dict(flat=False) %}
+                    {% set _ = new_args.get(key, []).remove(value) %}
+                    {# If the key has no more values, remove the key itself #}
+                    {% if not new_args[key] %}{% set _ = new_args.pop(key) %}{% endif %}
+                    {% if attribution_token %}{% set _ = new_args.update({'attribution_token': attribution_token}) %}{% endif %}
+                    <a href="{{ request_path }}?{{ new_args|urlencode }}" class="remove-facet-link" title="Remove filter">&times;</a>
+                </li>
+            {% endfor %}
+        {% endfor %}
+        </ul>
+        {# For 'clear all', we only want to keep the base query for search, and nothing for browse #}
+        {% set clear_args = {} %}
+        {% if query %}{% set _ = clear_args.update({'query': query}) %}{% endif %}
+        {% if request_args.get('expand') %}{% set _ = clear_args.update({'expand': request_args.get('expand')}) %}{% endif %}
+        {% if attribution_token %}{% set _ = clear_args.update({'attribution_token': attribution_token}) %}{% endif %}
+        <a href="{{ request_path }}?{{ clear_args|urlencode }}" class="clear-all-filters">Clear All</a>
+    {% else %}
+        <p>None</p>
+    {% endif %}
+</div>
+
+<hr>
+
+<div class="available-facets">
+    <h4>Refine By</h4>
+    {% for facet in facets if facet.values %}
+        <div class="facet-group collapsible">
+            {% set display_name = facet.display_name or facet.key|replace('_', ' ')|title %}
+            <button type="button" class="facet-toggle" aria-expanded="false" aria-controls="facet-values-{{ loop.index }}">
+                <span>{{ display_name }}</span>
+                <svg class="facet-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="facet-values-container is-collapsed" id="facet-values-{{ loop.index }}">
+                <ul>
+                {% for val in facet.values %}
+                    {% set facet_display, facet_value_for_url = '', '' %}
+                    {% if val.value %}{% set facet_display, facet_value_for_url = val.value, val.value %}{% elif val.interval %}{% set min_val = val.interval.minimum if val.interval.minimum is defined and val.interval.minimum is not none else '' %}{% set max_val = val.interval.exclusive_maximum if val.interval.exclusive_maximum is defined and val.interval.exclusive_maximum is not none else '' %}{% set facet_value_for_url = '%s-%s'|format(min_val, max_val) %}{% if facet.key == 'price' %}{% if min_val and max_val %}{% set facet_display = "$%.2f - $%.2f"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "$%.2f+"|format(min_val) %}{% else %}{% set facet_display = "Up to $%.2f"|format(max_val) %}{% endif %}{% elif facet.key == 'rating' %}{% if min_val and max_val %}{% set facet_display = "%.1f - %.1f stars"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "%.1f+ stars"|format(min_val) %}{% else %}{% set facet_display = "Up to %.1f stars"|format(max_val) %}{% endif %}{% else %}{% if min_val and max_val %}{% set facet_display = "%s - %s"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "%s+"|format(min_val) %}{% else %}{% set facet_display = "Up to %s"|format(max_val) %}{% endif %}{% endif %}{% endif %}
+                    {% if facet_display %}
+                        {% set is_selected = facet_value_for_url in selected_facets.get(facet.key, []) %}
+                        <li class="facet-item {% if is_selected %}selected{% endif %}">
+                            {% if is_selected %}<span>{{ facet_display }} ({{ val.count }})</span>{% else %}{% set add_args = request_args.to_dict(flat=False) %}{% set existing_values = add_args.get(facet.key, []) %}{% set _ = add_args.update({facet.key: existing_values + [facet_value_for_url]}) %}{% if attribution_token %}{% set _ = add_args.update({'attribution_token': attribution_token}) %}{% endif %}<a href="{{ request_path }}?{{ add_args|urlencode }}">{{ facet_display }} ({{ val.count }})</a>{% endif %}
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            </div>
+        </div>
+    {% else %}
+        <p>No filters available for this search.</p>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+
+{% macro render_pagination(current_page, total_pages, total_results, page_size, results_len, request_path, request_args, attribution_token) %}
+{% if total_pages > 1 %}
+<div class="pagination">
+    <div class="pagination-summary">
+        {% set start_item = (current_page - 1) * page_size + 1 %}
+        {% set end_item = start_item + results_len - 1 %}
+        Showing {{ start_item }}-{{ end_item }} of {{ "{:,}".format(total_results) }} results
+    </div>
+    <div class="pagination-links">
+        {% if current_page > 1 %}{% set prev_args = request_args.to_dict(flat=False) %}{% set _ = prev_args.update({'page': current_page - 1, 'attribution_token': attribution_token}) %}<a href="{{ request_path }}?{{ prev_args|urlencode }}">&laquo; Previous</a>{% else %}<span class="disabled">&laquo; Previous</span>{% endif %}
+        {% set page_window = 2 %}
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == 1 or p == total_pages or (p >= current_page - page_window and p <= current_page + page_window) %}
+                {% if loop.previtem and p > loop.previtem + 1 %}<span>...</span>{% endif %}
+                {% if p == current_page %}<span class="active">{{ p }}</span>{% else %}{% set page_args = request_args.to_dict(flat=False) %}{% set _ = page_args.update({'page': p, 'attribution_token': attribution_token}) %}<a href="{{ request_path }}?{{ page_args|urlencode }}">{{ p }}</a>{% endif %}
+            {% endif %}
+        {% endfor %}
+        {% if current_page < total_pages %}{% set next_args = request_args.to_dict(flat=False) %}{% set _ = next_args.update({'page': current_page + 1, 'attribution_token': attribution_token}) %}<a href="{{ request_path }}?{{ next_args|urlencode }}">Next &raquo;</a>{% else %}<span class="disabled">Next &raquo;</span>{% endif %}
+    </div>
+</div>
+{% endif %}
+{% endmacro %}
