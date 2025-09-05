@@ -226,7 +226,8 @@ def categories_list():
         # This is an efficient pattern to populate a category listing page.
         facet_spec = SearchRequest.FacetSpec(
             facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc"),
-            limit=300  # The default is 100; increasing to the max of 300 to fetch all categories.
+            # The UserEvent API allows a maximum of 250 pageCategories, so we cap the facet request here.
+            limit=250
         )
 
         branch_path = SearchServiceClient.branch_path(
@@ -251,11 +252,19 @@ def categories_list():
         # The first (and only) facet in the response will be our categories
         category_facet = search_response.facets[0] if search_response.facets else None
 
-        return render_template('categories.html', category_facet=category_facet, error=None)
+        # For a 'category-page-view' event, we need to supply the categories.
+        # In this case, it's all the categories being listed on the page.
+        page_categories = []
+        if category_facet:
+            page_categories = [v.value for v in category_facet.values]
+        page_categories_json = json.dumps(page_categories)
+
+        return render_template('categories.html', category_facet=category_facet, error=None, event_type='category-page-view', page_categories_json=page_categories_json)
 
     except Exception as e:
         print(f"Error fetching category list: {e}\n{traceback.format_exc()}")
-        return render_template('categories.html', error=str(e), category_facet=None)
+        # Pass event type and empty categories json on error to avoid breaking the event tracker
+        return render_template('categories.html', error=str(e), category_facet=None, event_type='category-page-view', page_categories_json='[]')
 
 
 @app.route('/browse/<path:category_name>')
@@ -327,10 +336,28 @@ def browse_category(category_name):
         total_pages = int(math.ceil(search_response.total_size / page_size)) if search_response.total_size > 0 else 0
         results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
         page_categories_json = json.dumps([category_name]) # The category being browsed
-        return render_template('browse_results.html', results=search_response.results, facets=search_response.facets, selected_facets=selected_facets, results_json=results_for_js, category_name=category_name, event_type='search', page_categories_json=page_categories_json, search_filter=search_filter, current_page=page, total_pages=total_pages, total_results=search_response.total_size, page_size=page_size, attribution_token=search_response.attribution_token)
+        return render_template('browse_results.html',
+            results=search_response.results,
+            facets=search_response.facets,
+            selected_facets=selected_facets,
+            results_json=results_for_js,
+            category_name=category_name,
+            event_type='search',
+            page_categories_json=page_categories_json,
+            search_filter=search_filter,
+            current_page=page,
+            total_pages=total_pages,
+            total_results=search_response.total_size,
+            page_size=page_size,
+            attribution_token=search_response.attribution_token
+        )
     except Exception as e:
         print(f"Error during browse search for category '{category_name}': {e}\n{traceback.format_exc()}")
-        return render_template('browse_results.html', error=str(e), category_name=category_name, event_type='search', facets=[], selected_facets={}, current_page=1, total_pages=0, total_results=0)
+        return render_template('browse_results.html',
+            error=str(e), category_name=category_name,
+            event_type='search', page_categories_json='[]', facets=[], selected_facets={},
+            current_page=1, total_pages=0, total_results=0
+        )
 
 @app.route('/search')
 def search():
@@ -744,6 +771,32 @@ def track_event():
     # Add the enriched userInfo object to the event payload.
     event_data['userInfo'] = user_info
     # --- End enrichment ---
+
+    # --- Server-side data correction for specific event types ---
+    # If the event is a category-page-view and the client didn't send
+    # pageCategories, we fetch them here to ensure the event is valid.
+    # This makes the system more robust against client-side issues.
+    if event_data.get("eventType") == "category-page-view" and "pageCategories" not in event_data:
+        print("Enriching category-page-view event with pageCategories on the server.")
+        try:
+            # This logic is the same as in the `categories_list` route.
+            facet_spec = SearchRequest.FacetSpec(
+                facet_key=SearchRequest.FacetSpec.FacetKey(key="categories"),
+                limit=250  # Match the limit used on the categories page itself.
+            )
+            branch_path = SearchServiceClient.branch_path(
+                project=config.PROJECT_ID, location=config.LOCATION,
+                catalog=config.CATALOG_ID, branch="default_branch"
+            )
+            search_request = SearchRequest(
+                placement=search_placement, branch=branch_path, query="",
+                visitor_id=event_data.get('visitorId'), page_size=0, facet_specs=[facet_spec]
+            )
+            search_response = next(search_client.search(search_request).pages)
+            if search_response.facets:
+                event_data["pageCategories"] = [v.value for v in search_response.facets[0].values]
+        except Exception as e:
+            print(f"Could not enrich category-page-view event: {e}")
 
     print(f"Received and enriched event data: {json.dumps(event_data, indent=2)}")
 
