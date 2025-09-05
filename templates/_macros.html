@@ -33,16 +33,18 @@
     {% if has_selection %}
         <ul>
         {% for facet in facets %}
-            {% for val in facet.values if val.selected %}
+            {% for val in facet['values'] if val.selected %}
                 <li class="applied-filter-tag">
                     {{ val.display }}
-                    {# Logic to create a URL to remove this specific facet value. #}
-                    {% set remove_args = request_args.to_dict(flat=False) %}
-                    {% set _ = remove_args.get(facet.key, []).remove(val.value) %}
-                    {# If the key has no more values, remove the key itself. #}
-                    {% if not remove_args[facet.key] %}{% set _ = remove_args.pop(facet.key) %}{% endif %}
-                    {% if attribution_token %}{% set _ = remove_args.update({'attribution_token': attribution_token}) %}{% endif %}
-                    <a href="{{ request_path }}?{{ remove_args|urlencode }}" class="remove-facet-link" title="Remove filter">&times;</a>
+                    {# To remove a filter, we rebuild the query string from all existing
+                       request args, except for the specific key-value pair we're removing. #}
+                    {% set remove_args_list = [] %}
+                    {% for k, v in request.args.items(multi=True) %}
+                        {% if not (k == facet.key and v == val.value) %}
+                            {% do remove_args_list.append((k, v)) %}
+                        {% endif %}
+                    {% endfor %}
+                    <a href="{{ request_path }}?{{ remove_args_list|urlencode }}" class="remove-facet-link" title="Remove filter">&times;</a>
                 </li>
             {% endfor %}
         {% endfor %}
@@ -76,11 +78,14 @@
                         {% if val.selected %}
                             <span>{{ val.display }} ({{ val.count }})</span>
                         {% else %}
-                            {% set add_args = request_args.to_dict(flat=False) %}
-                            {% set existing_values = add_args.get(facet.key, []) %}
-                            {% set _ = add_args.update({facet.key: existing_values + [val.value]}) %}
-                            {% if attribution_token %}{% set _ = add_args.update({'attribution_token': attribution_token}) %}{% endif %}
-                            <a href="{{ request_path }}?{{ add_args|urlencode }}">{{ val.display }} ({{ val.count }})</a>
+                            {# To add a filter, we rebuild the query string by taking all
+                               current request args and appending the new facet selection. #}
+                            {% set add_args_list = [] %}
+                            {% for k, v in request.args.items(multi=True) %}
+                                {% do add_args_list.append((k, v)) %}
+                            {% endfor %}
+                            {% do add_args_list.append((facet.key, val.value)) %}
+                            <a href="{{ request_path }}?{{ add_args_list|urlencode }}">{{ val.display }} ({{ val.count }})</a>
                         {% endif %}
                     </li>
                 {% endfor %}
@@ -103,15 +108,28 @@
         Showing {{ start_item }}-{{ end_item }} of {{ "{:,}".format(total_results) }} results
     </div>
     <div class="pagination-links">
-        {% if current_page > 1 %}{% set prev_args = request_args.to_dict(flat=False) %}{% set _ = prev_args.update({'page': current_page - 1, 'attribution_token': attribution_token}) %}<a href="{{ request_path }}?{{ prev_args|urlencode }}">&laquo; Previous</a>{% else %}<span class="disabled">&laquo; Previous</span>{% endif %}
+        {% if current_page > 1 %}
+            {% set prev_args_list = [] %}
+            {% for k, v in request.args.items(multi=True) if k != 'page' %}{% do prev_args_list.append((k, v)) %}{% endfor %}
+            {% do prev_args_list.append(('page', current_page - 1)) %}
+            <a href="{{ request_path }}?{{ prev_args_list|urlencode }}">&laquo; Previous</a>
+        {% else %}<span class="disabled">&laquo; Previous</span>{% endif %}
         {% set page_window = 2 %}
         {% for p in range(1, total_pages + 1) %}
             {% if p == 1 or p == total_pages or (p >= current_page - page_window and p <= current_page + page_window) %}
                 {% if loop.previtem and p > loop.previtem + 1 %}<span>...</span>{% endif %}
-                {% if p == current_page %}<span class="active">{{ p }}</span>{% else %}{% set page_args = request_args.to_dict(flat=False) %}{% set _ = page_args.update({'page': p, 'attribution_token': attribution_token}) %}<a href="{{ request_path }}?{{ page_args|urlencode }}">{{ p }}</a>{% endif %}
+                {% if p == current_page %}<span class="active">{{ p }}</span>{% else %}
+                    {% set page_args_list = [] %}
+                    {% for k, v in request.args.items(multi=True) if k != 'page' %}{% do page_args_list.append((k, v)) %}{% endfor %}
+                    {% do page_args_list.append(('page', p)) %}
+                    <a href="{{ request_path }}?{{ page_args_list|urlencode }}">{{ p }}</a>{% endif %}
             {% endif %}
         {% endfor %}
-        {% if current_page < total_pages %}{% set next_args = request_args.to_dict(flat=False) %}{% set _ = next_args.update({'page': current_page + 1, 'attribution_token': attribution_token}) %}<a href="{{ request_path }}?{{ next_args|urlencode }}">Next &raquo;</a>{% else %}<span class="disabled">Next &raquo;</span>{% endif %}
+        {% if current_page < total_pages %}
+            {% set next_args_list = [] %}
+            {% for k, v in request.args.items(multi=True) if k != 'page' %}{% do next_args_list.append((k, v)) %}{% endfor %}
+            {% do next_args_list.append(('page', current_page + 1)) %}
+            <a href="{{ request_path }}?{{ next_args_list|urlencode }}">Next &raquo;</a>{% else %}<span class="disabled">Next &raquo;</span>{% endif %}
     </div>
 </div>
 {% endif %}

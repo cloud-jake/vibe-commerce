@@ -413,7 +413,7 @@ def browse_category(category_name):
     # Additional filters from user interaction are ANDed with it.
     facet_filters = [f'categories: ANY("{category_name}")']
     selected_facets = {}
-    processed_keys = {'page'}
+    processed_keys = {'page', 'attribution_token'}
 
     for key in request.args:
         if key not in processed_keys:
@@ -505,7 +505,7 @@ def browse_category(category_name):
         print(f"Error during browse search for category '{category_name}': {e}\n{traceback.format_exc()}")
         return render_template('browse_results.html',
             error=str(e), category_name=category_name,
-            event_type='search', page_categories_json='[]', facets=[], selected_facets={},
+            event_type='search', page_categories_json='[]', facets=[], selected_facets={}, results_json='[]',
             current_page=1, total_pages=0, total_results=0
         )
 
