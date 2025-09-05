@@ -326,8 +326,8 @@ def browse_category(category_name):
         search_response = next(search_pager.pages)
         total_pages = int(math.ceil(search_response.total_size / page_size)) if search_response.total_size > 0 else 0
         results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
-        page_categories_json = json.dumps([category_name])
-        return render_template('browse_results.html', results=search_response.results, facets=search_response.facets, selected_facets=selected_facets, results_json=results_for_js, category_name=category_name, event_type='search', page_categories_json=page_categories_json, current_page=page, total_pages=total_pages, total_results=search_response.total_size, page_size=page_size, attribution_token=search_response.attribution_token)
+        page_categories_json = json.dumps([category_name]) # The category being browsed
+        return render_template('browse_results.html', results=search_response.results, facets=search_response.facets, selected_facets=selected_facets, results_json=results_for_js, category_name=category_name, event_type='search', page_categories_json=page_categories_json, search_filter=search_filter, current_page=page, total_pages=total_pages, total_results=search_response.total_size, page_size=page_size, attribution_token=search_response.attribution_token)
     except Exception as e:
         print(f"Error during browse search for category '{category_name}': {e}\n{traceback.format_exc()}")
         return render_template('browse_results.html', error=str(e), category_name=category_name, event_type='search', facets=[], selected_facets={}, current_page=1, total_pages=0, total_results=0)
@@ -481,6 +481,7 @@ def search():
             results=search_response.results,
             facets=search_response.facets,
             selected_facets=selected_facets,
+            search_filter=search_filter,
             results_json=results_for_js,
             query=query,
             use_expansion=use_expansion,
