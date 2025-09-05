@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+echo "Starting deployment at $(date)"
+
 # This script deploys the application to Cloud Run.
 # It sources environment variables from a .env file in the project root.
 
