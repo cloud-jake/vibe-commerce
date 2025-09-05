@@ -24,6 +24,7 @@ from google.cloud.retail_v2.types import (
     WriteUserEventRequest,
     SearchRequest,
     UserEvent,
+    UserInfo,
 )
 from google.protobuf import json_format
 from google.protobuf import struct_pb2
@@ -166,10 +167,25 @@ def index():
             f"/catalogs/{config.CATALOG_ID}/servingConfigs/{config.RECOMMENDATION_SERVING_CONFIG_ID}"
         )
 
-        # Create a user event object
+        # Create a high-quality user event object for the predict call.
+        # This event will be logged by the API and used for recommendations,
+        # replacing the need for a separate client-side event and preventing
+        # duplicate logging.
+        user_id = session.get('user', {}).get('sub')
+        user_info_proto = UserInfo(
+            user_agent=request.user_agent.string,
+            ip_address=request.remote_addr,
+            direct_user_request=True, # Explicitly set for high-quality events
+            user_id=user_id # Pass the user_id, which will be None if not logged in.
+        )
+
         user_event = UserEvent(
             event_type="home-page-view",
-            visitor_id=session.get('visitor_id')
+            visitor_id=session.get('visitor_id'),
+            user_info=user_info_proto,
+            uri=request.url,
+            referrer_uri=request.referrer,
+            page_view_id=str(uuid.uuid4())
         )
 
         # Create the predict request
@@ -208,8 +224,9 @@ def index():
         error = str(e)
         print(f"Error getting recommendations: {e}\n{traceback.format_exc()}")
     
-    # Pass the attribution token from the predict response to the template
-    return render_template('index.html', recommendations=recommendations, error=error, event_type='home-page-view', attribution_token=response.attribution_token if 'response' in locals() else None)
+    # Pass the attribution token from the predict response to the template.
+    # Do NOT pass event_type, as the event is now handled server-side.
+    return render_template('index.html', recommendations=recommendations, error=error, attribution_token=response.attribution_token if 'response' in locals() else None)
 
 
 @app.route('/about')
