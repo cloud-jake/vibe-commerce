@@ -47,7 +47,15 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // A browse event is a type of 'search' event with an empty 'searchQuery' and a populated 'pageCategories'.
-    const eventPayload = { eventType: '{{ event_type }}', visitorId: '{{ visitor_id }}', searchQuery: '', pageCategories: {{ page_categories_json | safe }}, attributionToken: '{{ attribution_token }}', productDetails: {{ results_json | tojson | safe }}.map(r => ({ product: { id: r.id }, quantity: 1 })) };
+    const eventPayload = {
+        eventType: '{{ event_type }}',
+        visitorId: '{{ visitor_id }}',
+        searchQuery: '',
+        pageCategories: {{ page_categories_json | safe }},
+        attributionToken: '{{ attribution_token }}',
+        // The productDetails for a search event should contain the list of product IDs shown to the user.
+        productDetails: {{ results_json | tojson | safe }}.map(r => ({ product: { id: r.id } }))
+    };
     trackEvent(eventPayload);
 });
 </script>
