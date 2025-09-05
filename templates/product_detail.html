@@ -92,16 +92,12 @@
 {% block scripts %}
 <script>
     {% if product %}
-    // Track the 'detail-page-view' event with the full product details and attribution token.
-    const eventPayload = {
-        eventType: 'detail-page-view',
-        visitorId: '{{ visitor_id }}',
-        attributionToken: '{{ attribution_token or '' }}',
-        productDetails: [{
-            product: {{ product_json|tojson|safe }}
-        }]
-    };
-    trackEvent(eventPayload);
+    document.addEventListener('DOMContentLoaded', function() {
+        // This event tracks that a user viewed a product detail page.
+        // It's crucial to include the attribution_token if the user arrived
+        // here from a search result or recommendation click.
+        VibeTracker.trackDetailPageView({{ product_json|tojson|safe }}, '{{ attribution_token or '' }}');
+    });
     {% endif %}
 </script>
 {% endblock %}

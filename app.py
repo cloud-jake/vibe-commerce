@@ -731,6 +731,22 @@ def track_event():
     if not event_data:
         return {"error": "Invalid JSON payload"}, 400
 
+    # --- Enrich event with server-side data ---
+    # Create userInfo object, which is required for high-quality event data.
+    user_info = {
+        "userAgent": request.user_agent.string,
+        "ipAddress": request.remote_addr
+    }
+    # If the user is logged in, associate the event with their stable user ID.
+    if session.get('user'):
+        user_info["userId"] = session['user']['sub']
+    
+    # Add the enriched userInfo object to the event payload.
+    event_data['userInfo'] = user_info
+    # --- End enrichment ---
+
+    print(f"Received and enriched event data: {json.dumps(event_data, indent=2)}")
+
     try:
         # The parent catalog resource name
         parent = user_event_client.catalog_path(
@@ -793,10 +809,21 @@ def add_to_cart():
         event_payload = {
             "eventType": "add-to-cart",
             "visitorId": session.get('visitor_id'),
+            "cartId": session.get('visitor_id'), # Use visitorId as a stable cartId
             "productDetails": product_details,
+            "uri": request.referrer or url_for('index', _external=True), # Page where add was clicked
         }
         if attribution_token:
             event_payload["attributionToken"] = attribution_token
+
+        # Add userInfo for a high-quality server-side event
+        user_info = {
+            "userAgent": request.user_agent.string,
+            "ipAddress": request.remote_addr
+        }
+        if session.get('user'):
+            user_info["userId"] = session['user']['sub']
+        event_payload['userInfo'] = user_info
 
         user_event = UserEvent.from_json(json.dumps(event_payload))
         write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
@@ -920,13 +947,20 @@ def checkout():
                 catalog=config.CATALOG_ID
             )
 
-            product_details = [
-                {
-                    "product": {"id": item['id']},
-                    "quantity": item['quantity']
-                }
-                for item in cart_at_checkout
-            ]
+            product_details = []
+            # Use the original cart data from session which includes price
+            for product_id, item_data in cart_from_session.items():
+                product_details.append({
+                    "product": {
+                        "id": product_id,
+                        # Include priceInfo for revenue optimization models
+                        "priceInfo": {
+                            "price": item_data.get('price', 0.0),
+                            "currencyCode": "USD"
+                        }
+                    },
+                    "quantity": item_data.get('quantity', 0)
+                })
 
             purchase_transaction = {
                 "id": transaction_id,
@@ -937,9 +971,20 @@ def checkout():
             user_event_payload = {
                 "eventType": "purchase-complete",
                 "visitorId": visitor_id,
+                "cartId": visitor_id, # Use visitorId as a stable cartId
                 "productDetails": product_details,
-                "purchaseTransaction": purchase_transaction
+                "purchaseTransaction": purchase_transaction,
+                "uri": url_for('checkout', _external=True)
             }
+
+            # Add userInfo for a high-quality server-side event
+            user_info = {
+                "userAgent": request.user_agent.string,
+                "ipAddress": request.remote_addr
+            }
+            if session.get('user'):
+                user_info["userId"] = session['user']['sub']
+            user_event_payload['userInfo'] = user_info
 
             user_event = UserEvent.from_json(json.dumps(user_event_payload))
             write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
