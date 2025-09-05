@@ -444,9 +444,20 @@ def browse_category(category_name):
     # facets like price and rating provides a better user experience and makes
     # the data easier for the frontend to handle, preventing potential JS errors.
     facet_specs = [
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc")),
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc")),
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc")),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc"),
+            limit=20,
+            enable_dynamic_position=False # Pin brands to the top
+        ),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc"),
+            enable_dynamic_position=False # Pin categories to the top
+        ),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc"),
+            limit=10,
+            enable_dynamic_position=True # Allow color to be dynamically positioned
+        ),
         SearchRequest.FacetSpec(
             facet_key=SearchRequest.FacetSpec.FacetKey(
                 key="price",
@@ -457,7 +468,8 @@ def browse_category(category_name):
                     Interval(minimum=100.0, maximum=200.0),
                     Interval(minimum=200.0),
                 ]
-            )
+            ),
+            enable_dynamic_position=False # Pin price to the top
         ),
         SearchRequest.FacetSpec(
             facet_key=SearchRequest.FacetSpec.FacetKey(
@@ -468,7 +480,8 @@ def browse_category(category_name):
                     Interval(minimum=3.0, maximum=4.0),
                     Interval(minimum=4.0),
                 ]
-            )
+            ),
+            enable_dynamic_position=False # Pin rating to the top
         ),
     ]
     branch_path = SearchServiceClient.branch_path(project=config.PROJECT_ID, location=config.LOCATION, catalog=config.CATALOG_ID, branch="default_branch")
@@ -599,9 +612,20 @@ def search():
     # facets like price and rating provides a better user experience and makes
     # the data easier for the frontend to handle, preventing potential JS errors.
     facet_specs = [
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc")),
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc")),
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc")),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc"),
+            limit=20,
+            enable_dynamic_position=False # Pin brands to the top
+        ),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc"),
+            enable_dynamic_position=False # Pin categories to the top
+        ),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc"),
+            limit=10,
+            enable_dynamic_position=True # Allow color to be dynamically positioned
+        ),
         SearchRequest.FacetSpec(
             facet_key=SearchRequest.FacetSpec.FacetKey(
                 key="price",
@@ -612,7 +636,8 @@ def search():
                     Interval(minimum=100.0, maximum=200.0),
                     Interval(minimum=200.0),
                 ]
-            )
+            ),
+            enable_dynamic_position=False # Pin price to the top
         ),
         SearchRequest.FacetSpec(
             facet_key=SearchRequest.FacetSpec.FacetKey(
@@ -623,7 +648,8 @@ def search():
                     Interval(minimum=3.0, maximum=4.0),
                     Interval(minimum=4.0),
                 ]
-            )
+            ),
+            enable_dynamic_position=False # Pin rating to the top
         ),
     ]
 
