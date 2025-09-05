@@ -38,10 +38,15 @@
 {% block scripts %}
     {% if not error %}
         <script>
-            const searchResults = {{ results_json|tojson|safe }};
-            const query = {{ query|tojson|safe }};
-            const attributionToken = {{ search_event_attribution_token|tojson|safe }};
-            VibeTracker.trackSearchView(query, searchResults, attributionToken);
+            const eventPayload = {
+                eventType: 'search',
+                visitorId: '{{ visitor_id }}',
+                searchQuery: {{ query|tojson|safe }},
+                filter: {{ search_filter|tojson|safe }},
+                attributionToken: {{ search_event_attribution_token|tojson|safe }},
+                productDetails: {{ results_json|tojson|safe }}.map(r => ({ product: { id: r.id } }))
+            };
+            trackEvent(eventPayload);
         </script>
     {% endif %}
 {% endblock %}
