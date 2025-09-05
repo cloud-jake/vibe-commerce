@@ -80,12 +80,12 @@
                         {% set l1_loop_index = loop.index %}
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="heading-{{ loop.index }}">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="true" aria-controls="collapse-{{ loop.index }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false" aria-controls="collapse-{{ loop.index }}">
                                     <span class="flex-grow-1 text-truncate me-3">{{ l1_name }}</span>
                                     <span class="badge bg-primary rounded-pill flex-shrink-0">{{ "{:,}".format(l1_data.count) }}</span>
                                 </button>
                             </h2>
-                            <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse show" aria-labelledby="heading-{{ loop.index }}">
+                            <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ loop.index }}">
                                 <div class="accordion-body p-0">
                                     <ul class="list-group list-group-flush">
                                         {% for l2_name, l2_data in l1_data.subcategories|dictsort %}

@@ -225,7 +225,8 @@ def categories_list():
         # Perform a search with an empty query and a facet spec for categories.
         # This is an efficient pattern to populate a category listing page.
         facet_spec = SearchRequest.FacetSpec(
-            facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc")
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc"),
+            limit=300  # The default is 100; increasing to the max of 300 to fetch all categories.
         )
 
         branch_path = SearchServiceClient.branch_path(
