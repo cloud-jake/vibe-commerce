@@ -49,16 +49,19 @@
     {# Pass 2: Sum counts up the tree from children to parents for accurate totals. #}
     {# This must be done from the bottom up to ensure totals are cumulative. #}
     {% for l1_name, l1_data in category_tree.items() %}
-        {% set l1_total = l1_data.count %} {# Start with L1's own direct count #}
+        {# Use a namespace object for a mutable counter that works across loop scopes. #}
+        {% set ns_l1 = namespace(total=l1_data.count) %}
         {% for l2_name, l2_data in l1_data.subcategories.items() %}
-            {% set l2_total = l2_data.count %} {# Start with L2's own count #}
+            {# A second namespace is needed for the L2 total, as it's modified in a nested (L3) loop. #}
+            {% set ns_l2 = namespace(total=l2_data.count) %}
             {% for l3_name, l3_data in l2_data.subcategories.items() %}
-                {% set l2_total = l2_total + l3_data.count %}
+                {% set ns_l2.total = ns_l2.total + l3_data.count %}
             {% endfor %}
-            {% do l2_data.update({'count': l2_total}) %}
-            {% set l1_total = l1_total + l2_total %} {# Add the newly calculated cumulative L2 total to L1 #}
+            {% do l2_data.update({'count': ns_l2.total}) %}
+            {# Add the newly calculated cumulative L2 total to the L1 total in the namespace. #}
+            {% set ns_l1.total = ns_l1.total + ns_l2.total %}
         {% endfor %}
-        {% do l1_data.update({'count': l1_total}) %}
+        {% do l1_data.update({'count': ns_l1.total}) %}
     {% endfor %}
 {% endif %}
 
