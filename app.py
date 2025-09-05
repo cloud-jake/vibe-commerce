@@ -33,6 +33,10 @@ import config
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
+# Enable the 'do' extension for Jinja2 templates. This is required for the
+# complex category hierarchy processing in `categories.html`.
+app.jinja_env.add_extension('jinja2.ext.do')
+
 # When deploying to a managed service like Cloud Run, the app is behind a
 # reverse proxy. The ProxyFix middleware helps the app correctly handle
 # headers like X-Forwarded-For and X-Forwarded-Proto, which is crucial for
