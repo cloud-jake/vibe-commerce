@@ -160,6 +160,7 @@ def index():
     """Homepage: Fetches and displays product recommendations."""
     recommendations = []
     error = None
+    response = None # Initialize to avoid reference errors in exception handling
     try:
         # The full resource name of the serving config
         recommendation_placement = (
@@ -167,31 +168,31 @@ def index():
             f"/catalogs/{config.CATALOG_ID}/servingConfigs/{config.RECOMMENDATION_SERVING_CONFIG_ID}"
         )
 
-        # Create a high-quality user event object for the predict call.
-        # This event will be logged by the API and used for recommendations,
-        # replacing the need for a separate client-side event and preventing
-        # duplicate logging.
+        # --- Step 1: Create a context event for the predict call ---
+        # This event is NOT logged but provides context for the prediction.
+        # A separate event will be written later to log the impression.
         user_id = session.get('user', {}).get('sub')
         user_info_proto = UserInfo(
             user_agent=request.user_agent.string,
             ip_address=request.remote_addr,
-            direct_user_request=True, # Explicitly set for high-quality events
-            user_id=user_id # Pass the user_id, which will be None if not logged in.
+            direct_user_request=True,
+            user_id=user_id
         )
+        page_view_id = str(uuid.uuid4()) # Generate one ID for both context and logging
 
-        user_event = UserEvent(
+        context_user_event = UserEvent(
             event_type="home-page-view",
             visitor_id=session.get('visitor_id'),
             user_info=user_info_proto,
             uri=request.url,
             referrer_uri=request.referrer,
-            page_view_id=str(uuid.uuid4())
+            page_view_id=page_view_id
         )
 
         # Create the predict request
         predict_request = PredictRequest(
             placement=recommendation_placement,
-            user_event=user_event,
+            user_event=context_user_event,
             page_size=10,
             params={"returnProduct": struct_pb2.Value(bool_value=True)}
         )
@@ -199,7 +200,7 @@ def index():
         # Get the prediction response
         response = prediction_client.predict(request=predict_request)
 
-        # Process the results
+        # --- Step 2: Process recommendations for rendering ---
         for result in response.results:
             # Convert the PredictionResult proto message to a dictionary.
             # This correctly handles all nested structures and types, including
@@ -220,13 +221,52 @@ def index():
                 product_json_str = json.dumps(product_dict)
                 recommendations.append(Product.from_json(product_json_str))
 
+        # --- Step 3: Log a single, rich user event for the page view and impression ---
+        # This event IS logged and includes details from the predict response.
+        if response and recommendations:
+            try:
+                # Extract recommended product IDs from the processed recommendations
+                recommended_product_ids = [p.id for p in recommendations]
+
+                # Create the productDetails list for the event
+                product_details_list = [
+                    {"product": {"id": pid}} for pid in recommended_product_ids
+                ]
+
+                # Create the rich event payload for logging
+                logged_event_payload = {
+                    "eventType": "home-page-view",
+                    "visitorId": session.get('visitor_id'),
+                    "userInfo": UserInfo.to_dict(user_info_proto), # Reuse the user_info
+                    "uri": request.url,
+                    "referrerUri": request.referrer,
+                    "pageViewId": page_view_id, # Reuse the same page view ID
+                    "attributionToken": response.attribution_token,
+                    "productDetails": product_details_list,
+                }
+
+                # Construct and write the event
+                parent = user_event_client.catalog_path(
+                    project=config.PROJECT_ID,
+                    location=config.LOCATION,
+                    catalog=config.CATALOG_ID
+                )
+                logged_event = UserEvent.from_json(json.dumps(logged_event_payload))
+                write_request = WriteUserEventRequest(parent=parent, user_event=logged_event)
+                user_event_client.write_user_event(request=write_request)
+                print(f"Successfully wrote home-page-view with recommendation impression for visitor {session.get('visitor_id')}")
+
+            except Exception as e:
+                # Log the error but don't block the page from rendering
+                print(f"Error writing recommendation impression event: {e}\n{traceback.format_exc()}")
+
     except (GoogleAPICallError, Exception) as e:
         error = str(e)
-        print(f"Error getting recommendations: {e}\n{traceback.format_exc()}")
+        print(f"Error during homepage processing: {e}\n{traceback.format_exc()}")
     
     # Pass the attribution token from the predict response to the template.
     # Do NOT pass event_type, as the event is now handled server-side.
-    return render_template('index.html', recommendations=recommendations, error=error, attribution_token=response.attribution_token if 'response' in locals() else None)
+    return render_template('index.html', recommendations=recommendations, error=error, attribution_token=response.attribution_token if response else None)
 
 
 @app.route('/about')
