@@ -27,34 +27,27 @@
 #}
 <div class="applied-filters">
     <h4>Applied Filters</h4>
-    {% if selected_facets %}
+    {# We now iterate through the processed facets to find selected items,
+       which allows us to use the pre-formatted display strings. #}
+    {% set has_selection = selected_facets.items()|length > 0 %}
+    {% if has_selection %}
         <ul>
-        {% for key, values in selected_facets.items() %}
-            {% for value in values %}
+        {% for facet in facets %}
+            {% for val in facet.values if val.selected %}
                 <li class="applied-filter-tag">
-                    {% set display_value = value %}
-                    {% if (key == 'price' or key == 'rating') and '-' in value %}
-                        {% set parts = value.split('-') %}
-                        {% set min_val, max_val = parts[0], parts[1] %}
-                        {% if key == 'price' %}
-                            {% if min_val and max_val %}{% set display_value = '$' ~ min_val ~ ' - $' ~ max_val %}{% elif min_val %}{% set display_value = '$' ~ min_val ~ '+' %}{% else %}{% set display_value = 'Up to $' ~ max_val %}{% endif %}
-                        {% else %}
-                            {% if min_val and max_val %}{% set display_value = min_val ~ ' - ' ~ max_val %}{% elif min_val %}{% set display_value = min_val ~ '+' %}{% else %}{% set display_value = 'Up to ' ~ max_val %}{% endif %}
-                        {% endif %}
-                    {% endif %}
-                    {{ display_value }}
-                    {# Logic to create a URL to remove this specific facet value #}
-                    {% set new_args = request_args.to_dict(flat=False) %}
-                    {% set _ = new_args.get(key, []).remove(value) %}
-                    {# If the key has no more values, remove the key itself #}
-                    {% if not new_args[key] %}{% set _ = new_args.pop(key) %}{% endif %}
-                    {% if attribution_token %}{% set _ = new_args.update({'attribution_token': attribution_token}) %}{% endif %}
-                    <a href="{{ request_path }}?{{ new_args|urlencode }}" class="remove-facet-link" title="Remove filter">&times;</a>
+                    {{ val.display }}
+                    {# Logic to create a URL to remove this specific facet value. #}
+                    {% set remove_args = request_args.to_dict(flat=False) %}
+                    {% set _ = remove_args.get(facet.key, []).remove(val.value) %}
+                    {# If the key has no more values, remove the key itself. #}
+                    {% if not remove_args[facet.key] %}{% set _ = remove_args.pop(facet.key) %}{% endif %}
+                    {% if attribution_token %}{% set _ = remove_args.update({'attribution_token': attribution_token}) %}{% endif %}
+                    <a href="{{ request_path }}?{{ remove_args|urlencode }}" class="remove-facet-link" title="Remove filter">&times;</a>
                 </li>
             {% endfor %}
         {% endfor %}
         </ul>
-        {# For 'clear all', we only want to keep the base query for search, and nothing for browse #}
+        {# Logic for the 'Clear All' link. #}
         {% set clear_args = {} %}
         {% if query %}{% set _ = clear_args.update({'query': query}) %}{% endif %}
         {% if request_args.get('expand') %}{% set _ = clear_args.update({'expand': request_args.get('expand')}) %}{% endif %}
@@ -69,24 +62,27 @@
 
 <div class="available-facets">
     <h4>Refine By</h4>
-    {% for facet in facets if facet.values %}
+    {% for facet in facets if facet['values'] %}
         <div class="facet-group collapsible">
-            {% set display_name = facet.display_name or facet.key|replace('_', ' ')|title %}
-            <button type="button" class="facet-toggle" aria-expanded="false" aria-controls="facet-values-{{ loop.index }}">
+            {% set display_name = facet.display_name %}
+            <button type="button" class="facet-toggle" data-bs-toggle="collapse" data-bs-target="#facet-values-{{ loop.index }}" aria-expanded="false" aria-controls="facet-values-{{ loop.index }}">
                 <span>{{ display_name }}</span>
                 <svg class="facet-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
-            <div class="facet-values-container is-collapsed" id="facet-values-{{ loop.index }}">
+            <div class="facet-values-container collapse" id="facet-values-{{ loop.index }}">
                 <ul>
-                {% for val in facet.values %}
-                    {% set facet_display, facet_value_for_url = '', '' %}
-                    {% if val.value %}{% set facet_display, facet_value_for_url = val.value, val.value %}{% elif val.interval %}{% set min_val = val.interval.minimum if val.interval.minimum is defined and val.interval.minimum is not none else '' %}{% set max_val = val.interval.exclusive_maximum if val.interval.exclusive_maximum is defined and val.interval.exclusive_maximum is not none else '' %}{% set facet_value_for_url = '%s-%s'|format(min_val, max_val) %}{% if facet.key == 'price' %}{% if min_val and max_val %}{% set facet_display = "$%.2f - $%.2f"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "$%.2f+"|format(min_val) %}{% else %}{% set facet_display = "Up to $%.2f"|format(max_val) %}{% endif %}{% elif facet.key == 'rating' %}{% if min_val and max_val %}{% set facet_display = "%.1f - %.1f stars"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "%.1f+ stars"|format(min_val) %}{% else %}{% set facet_display = "Up to %.1f stars"|format(max_val) %}{% endif %}{% else %}{% if min_val and max_val %}{% set facet_display = "%s - %s"|format(min_val, max_val) %}{% elif min_val %}{% set facet_display = "%s+"|format(min_val) %}{% else %}{% set facet_display = "Up to %s"|format(max_val) %}{% endif %}{% endif %}{% endif %}
-                    {% if facet_display %}
-                        {% set is_selected = facet_value_for_url in selected_facets.get(facet.key, []) %}
-                        <li class="facet-item {% if is_selected %}selected{% endif %}">
-                            {% if is_selected %}<span>{{ facet_display }} ({{ val.count }})</span>{% else %}{% set add_args = request_args.to_dict(flat=False) %}{% set existing_values = add_args.get(facet.key, []) %}{% set _ = add_args.update({facet.key: existing_values + [facet_value_for_url]}) %}{% if attribution_token %}{% set _ = add_args.update({'attribution_token': attribution_token}) %}{% endif %}<a href="{{ request_path }}?{{ add_args|urlencode }}">{{ facet_display }} ({{ val.count }})</a>{% endif %}
-                        </li>
-                    {% endif %}
+                {% for val in facet['values'] %}
+                    <li class="facet-item {% if val.selected %}selected{% endif %}">
+                        {% if val.selected %}
+                            <span>{{ val.display }} ({{ val.count }})</span>
+                        {% else %}
+                            {% set add_args = request_args.to_dict(flat=False) %}
+                            {% set existing_values = add_args.get(facet.key, []) %}
+                            {% set _ = add_args.update({facet.key: existing_values + [val.value]}) %}
+                            {% if attribution_token %}{% set _ = add_args.update({'attribution_token': attribution_token}) %}{% endif %}
+                            <a href="{{ request_path }}?{{ add_args|urlencode }}">{{ val.display }} ({{ val.count }})</a>
+                        {% endif %}
+                    </li>
                 {% endfor %}
             </ul>
             </div>

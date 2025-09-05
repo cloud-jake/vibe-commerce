@@ -25,6 +25,7 @@ from google.cloud.retail_v2.types import (
     SearchRequest,
     UserEvent,
     UserInfo,
+    Interval,
 )
 from google.protobuf import json_format
 from google.protobuf import struct_pb2
@@ -96,6 +97,73 @@ conversational_placement = (
     f"{config.CATALOG_ID}/placements/default_search"
 )
 
+def _process_facets(facets_from_api, selected_facets):
+    """
+    Converts the facet protobuf objects from the API into a more
+    template-friendly list of dictionaries with a consistent structure.
+    This helps prevent client-side JS errors from inconsistent data shapes.
+    """
+    processed_facets = []
+    if not facets_from_api:
+        return processed_facets
+
+    # A map for creating user-friendly display names for facet keys.
+    display_name_map = {
+        'colorFamilies': 'Color',
+        'categories': 'Category'
+    }
+
+    for facet in facets_from_api:
+        facet_key = facet.key
+        display_name = display_name_map.get(facet_key, facet_key.title())
+
+        processed_values = []
+        for facet_value in facet.values:
+            value_str = ""
+            display_str = ""
+
+            if facet_value.value:  # Textual facet
+                value_str = facet_value.value
+                display_str = facet_value.value
+            elif facet_value.interval:  # Numerical facet
+                min_val = facet_value.interval.minimum
+                max_val = facet_value.interval.maximum
+                
+                # Create the value string for the URL parameter, e.g., "25.0-50.0"
+                # The client-side parsing logic expects this format.
+                value_str = f"{min_val or ''}-{max_val or ''}"
+
+                # Create a user-friendly display string
+                if facet_key == 'price':
+                    if min_val is not None and max_val is not None:
+                        display_str = f"${min_val:g} - ${max_val:g}"
+                    elif min_val is not None:
+                        display_str = f"Over ${min_val:g}"
+                    elif max_val is not None:
+                        display_str = f"Under ${max_val:g}"
+                elif facet_key == 'rating':
+                    if min_val is not None and max_val is not None:
+                        display_str = f"{min_val:g} - {max_val:g} Stars"
+                    elif min_val is not None:
+                        display_str = f"{min_val:g}+ Stars"
+
+            # Check if this facet value is currently selected
+            is_selected = value_str in selected_facets.get(facet_key, [])
+
+            # Only add the facet value if it has a count
+            if facet_value.count > 0:
+                processed_values.append({
+                    'value': value_str, 'display': display_str,
+                    'count': facet_value.count, 'selected': is_selected,
+                })
+
+        # Only add the facet group if it has values with counts
+        if processed_values:
+            processed_facets.append({
+                'key': facet_key, 'display_name': display_name, 'values': processed_values
+            })
+            
+    return processed_facets
 
 @app.context_processor
 def inject_shared_variables():
@@ -372,12 +440,36 @@ def browse_category(category_name):
     search_filter = " AND ".join(facet_filters)
 
     # --- Build Search Request for BROWSE ---
+    # Define explicit facet specifications. Using static intervals for numerical
+    # facets like price and rating provides a better user experience and makes
+    # the data easier for the frontend to handle, preventing potential JS errors.
     facet_specs = [
         SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc")),
         SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc")),
         SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc")),
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="price")),
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="rating")),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(
+                key="price",
+                intervals=[
+                    Interval(minimum=0.0, maximum=25.0),
+                    Interval(minimum=25.0, maximum=50.0),
+                    Interval(minimum=50.0, maximum=100.0),
+                    Interval(minimum=100.0, maximum=200.0),
+                    Interval(minimum=200.0),
+                ]
+            )
+        ),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(
+                key="rating",
+                intervals=[
+                    Interval(minimum=1.0, maximum=2.0),
+                    Interval(minimum=2.0, maximum=3.0),
+                    Interval(minimum=3.0, maximum=4.0),
+                    Interval(minimum=4.0),
+                ]
+            )
+        ),
     ]
     branch_path = SearchServiceClient.branch_path(project=config.PROJECT_ID, location=config.LOCATION, catalog=config.CATALOG_ID, branch="default_branch")
 
@@ -391,11 +483,12 @@ def browse_category(category_name):
         search_pager = search_client.search(search_request)
         search_response = next(search_pager.pages)
         total_pages = int(math.ceil(search_response.total_size / page_size)) if search_response.total_size > 0 else 0
+        processed_facets = _process_facets(search_response.facets, selected_facets)
         results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
         page_categories_json = json.dumps([category_name]) # The category being browsed
         return render_template('browse_results.html',
             results=search_response.results,
-            facets=search_response.facets,
+            facets=processed_facets,
             selected_facets=selected_facets,
             results_json=results_for_js,
             category_name=category_name,
@@ -502,16 +595,36 @@ def search():
             condition=SearchRequest.QueryExpansionSpec.Condition.DISABLED
         )
 
-    # Define explicit facet specifications instead of using dynamic faceting.
-    # This gives more control over which facets are returned and how they are ordered.
+    # Define explicit facet specifications. Using static intervals for numerical
+    # facets like price and rating provides a better user experience and makes
+    # the data easier for the frontend to handle, preventing potential JS errors.
     facet_specs = [
         SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc")),
         SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc")),
         SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc")),
-        # For numerical facets like price and rating, we can let the API generate dynamic intervals
-        # based on the distribution of values in the search results.
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="price")),
-        SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="rating")),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(
+                key="price",
+                intervals=[
+                    Interval(minimum=0.0, maximum=25.0),
+                    Interval(minimum=25.0, maximum=50.0),
+                    Interval(minimum=50.0, maximum=100.0),
+                    Interval(minimum=100.0, maximum=200.0),
+                    Interval(minimum=200.0),
+                ]
+            )
+        ),
+        SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(
+                key="rating",
+                intervals=[
+                    Interval(minimum=1.0, maximum=2.0),
+                    Interval(minimum=2.0, maximum=3.0),
+                    Interval(minimum=3.0, maximum=4.0),
+                    Interval(minimum=4.0),
+                ]
+            )
+        ),
     ]
 
     # # --- Handle Sorting ---
@@ -557,13 +670,14 @@ def search():
         if search_response.total_size > 0:
             total_pages = int(math.ceil(search_response.total_size / page_size))
 
+        processed_facets = _process_facets(search_response.facets, selected_facets)
         # The search_response.results is a list of proto messages, not directly
         # JSON serializable. Convert them to dicts for the event tracker.
         results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
         return render_template(
             'search_results.html',
             results=search_response.results,
-            facets=search_response.facets,
+            facets=processed_facets,
             selected_facets=selected_facets,
             search_filter=search_filter,
             results_json=results_for_js,
