@@ -3,41 +3,183 @@
 {% block title %}Product Categories - {{ site_name }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Product Categories</h1>
+{#
+    This block preprocesses the flat category list from the API into a nested
+    hierarchical structure (a tree) to make rendering the nested UI easier.
+    This is complex for a template, but it avoids changing the backend Python code.
+#}
+{% set category_tree = {} %}
+{% if category_facet and category_facet.values %}
+    {# Pass 1: Build the tree structure and assign direct counts from the API. #}
+    {% for item in category_facet.values %}
+        {% set path = item.value.split(' > ') %}
+        {% set l1 = path[0] %}
+        {% set l2 = path[1] if path|length > 1 else none %}
+        {% set l3 = path[2] if path|length > 2 else none %}
 
-    {% if error %}
-        <div class="alert alert-danger" role="alert">
-            Could not load categories: {{ error }}
-        </div>
-    {% elif category_facet and category_facet.values %}
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-            {% for value in category_facet.values %}
-                <div class="col">
-                    <a href="{{ url_for('browse_category', category_name=value.value) }}" class="card h-100 text-center text-decoration-none category-card-link">
-                        <div class="card-body d-flex flex-column justify-content-center">
-                            <h5 class="card-title mb-1">{{ value.value }}</h5>
-                            <small class="text-muted">({{ "{:,}".format(value.count) }} products)</small>
-                        </div>
-                    </a>
-                </div>
+        {# Level 1 node #}
+        {% if l1 not in category_tree %}
+            {% do category_tree.update({l1: {'count': 0, 'full_path': l1, 'subcategories': {}}}) %}
+        {% endif %}
+
+        {# Level 2 node #}
+        {% if l2 %}
+            {% if l2 not in category_tree[l1].subcategories %}
+                {% do category_tree[l1].subcategories.update({l2: {'count': 0, 'full_path': l1 ~ ' > ' ~ l2, 'subcategories': {}}}) %}
+            {% endif %}
+        {% endif %}
+
+        {# Level 3 node (always a leaf) #}
+        {% if l3 %}
+            {% if l3 not in category_tree[l1].subcategories[l2].subcategories %}
+                {% do category_tree[l1].subcategories[l2].subcategories.update({l3: {'count': 0, 'full_path': item.value}}) %}
+            {% endif %}
+        {% endif %}
+
+        {# Assign the count from the API to the specific node this item represents. #}
+        {% if path|length == 3 %}
+            {% do category_tree[l1].subcategories[l2].subcategories[l3].update({'count': item.count}) %}
+        {% elif path|length == 2 %}
+            {% do category_tree[l1].subcategories[l2].update({'count': item.count}) %}
+        {% elif path|length == 1 %}
+            {% do category_tree[l1].update({'count': item.count}) %}
+        {% endif %}
+    {% endfor %}
+
+    {# Pass 2: Sum counts up the tree from children to parents for accurate totals. #}
+    {# This must be done from the bottom up to ensure totals are cumulative. #}
+    {% for l1_name, l1_data in category_tree.items() %}
+        {% set l1_total = l1_data.count %} {# Start with L1's own direct count #}
+        {% for l2_name, l2_data in l1_data.subcategories.items() %}
+            {% set l2_total = l2_data.count %} {# Start with L2's own count #}
+            {% for l3_name, l3_data in l2_data.subcategories.items() %}
+                {% set l2_total = l2_total + l3_data.count %}
             {% endfor %}
+            {% do l2_data.update({'count': l2_total}) %}
+            {% set l1_total = l1_total + l2_total %} {# Add the newly calculated cumulative L2 total to L1 #}
+        {% endfor %}
+        {% do l1_data.update({'count': l1_total}) %}
+    {% endfor %}
+{% endif %}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <h1 class="mb-4 text-center">Product Categories</h1>
+
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    Could not load categories: {{ error }}
+                </div>
+            {% elif category_tree %}
+                <div class="accordion" id="categoryAccordion">
+                    {% for l1_name, l1_data in category_tree|dictsort %}
+                        {% set l1_loop_index = loop.index %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading-{{ loop.index }}">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="true" aria-controls="collapse-{{ loop.index }}">
+                                    <span class="flex-grow-1 text-truncate me-3">{{ l1_name }}</span>
+                                    <span class="badge bg-primary rounded-pill flex-shrink-0">{{ "{:,}".format(l1_data.count) }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse show" aria-labelledby="heading-{{ loop.index }}">
+                                <div class="accordion-body p-0">
+                                    <ul class="list-group list-group-flush">
+                                        {% for l2_name, l2_data in l1_data.subcategories|dictsort %}
+                                            <li class="list-group-item l2-item py-2">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="d-flex align-items-center flex-grow-1 me-3" style="min-width: 0;">
+                                                        <a href="{{ url_for('browse_category', category_name=l2_data.full_path) }}" class="l2-link text-truncate">{{ l2_name }}</a>
+                                                        <span class="badge bg-light text-dark rounded-pill ms-2 flex-shrink-0">{{ "{:,}".format(l2_data.count) }}</span>
+                                                    </div>
+                                                    <div class="flex-shrink-0">
+                                                        {% if l2_data.subcategories %}
+                                                            {# L3 starts collapsed: aria-expanded="false" and no 'show' class on target div #}
+                                                            <button class="btn btn-sm btn-outline-secondary l3-toggle collapsed" data-bs-toggle="collapse" data-bs-target="#l3-collapse-{{ l1_loop_index }}-{{ loop.index }}" aria-expanded="false" title="Toggle sub-categories">
+                                                                <span class="l3-toggle-icon"></span>
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% if l2_data.subcategories %}
+                                                    <div class="collapse l3-container" id="l3-collapse-{{ l1_loop_index }}-{{ loop.index }}">
+                                                        <ul class="list-group list-group-flush mt-2">
+                                                            {% for l3_name, l3_data in l2_data.subcategories|dictsort %}
+                                                                <li class="list-group-item l3-item border-0 d-flex justify-content-between align-items-center">
+                                                                    <a href="{{ url_for('browse_category', category_name=l3_data.full_path) }}">{{ l3_name }}</a>
+                                                                    <span class="badge bg-light text-dark rounded-pill">{{ "{:,}".format(l3_data.count) }}</span>
+                                                                </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-center">No product categories found.</p>
+            {% endif %}
         </div>
-    {% else %}
-        <p>No product categories found.</p>
-    {% endif %}
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <style>
-.category-card-link {
-    color: inherit;
-    transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
+.accordion-button:not(.collapsed) {
+    font-weight: 600;
 }
-.category-card-link:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+
+.l2-item {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+}
+.l2-link {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+}
+.l2-link:hover {
+    color: var(--primary-color);
+}
+.l3-toggle {
+    border-radius: 50%;
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ced4da; /* Match Bootstrap outline button */
+    background-color: transparent;
+    color: #6c757d;
+}
+.l3-toggle-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    font-weight: 300;
+}
+.l3-toggle.collapsed .l3-toggle-icon::before {
+    content: '+';
+}
+.l3-toggle:not(.collapsed) .l3-toggle-icon::before {
+    content: '\2212'; /* Minus sign */
+}
+.l3-container {
+    padding-left: 1rem;
+}
+.l3-item a {
+    text-decoration: none;
+    color: #495057; /* A slightly lighter text color for sub-items */
+}
+.l3-item a:hover {
+    color: var(--primary-color);
 }
 </style>
 {% endblock %}

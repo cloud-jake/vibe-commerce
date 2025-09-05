@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ site_name|default('Vibe Commerce') }}{% endblock %}</title>
+    {# Add Bootstrap CSS for layout, components, and utilities #}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 </head>
@@ -155,28 +157,9 @@
             });
         }
     </script>
+    {# Add Bootstrap JS bundle for components like accordions and collapse #}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     {% block scripts %}{% endblock %}
-    <script>
-        // --- Facet Collapse/Expand Logic ---
-        // This is used on both search and browse pages.
-        document.addEventListener('DOMContentLoaded', () => {
-            // Use event delegation for dynamically added content
-            document.body.addEventListener('click', (e) => {
-                const toggle = e.target.closest('.facet-toggle');
-                if (toggle) {
-                    const content = document.getElementById(toggle.getAttribute('aria-controls'));
-                    if (content) {
-                        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-                        toggle.setAttribute('aria-expanded', !isExpanded);
-                        content.classList.toggle('is-collapsed');
-
-                        // Animate the max-height for smooth transition
-                        content.style.maxHeight = content.classList.contains('is-collapsed') ? null : content.scrollHeight + 'px';
-                    }
-                }
-            });
-        });
-    </script>
     <script>
         // --- Speech Recognition for Main Search Bar ---
         document.addEventListener('DOMContentLoaded', () => {
