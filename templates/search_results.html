@@ -38,15 +38,17 @@
 {% block scripts %}
     {% if not error %}
         <script>
-            const eventPayload = {
-                eventType: 'search',
-                visitorId: '{{ visitor_id }}',
-                searchQuery: {{ query|tojson|safe }},
-                filter: {{ search_filter|tojson|safe }},
-                attributionToken: {{ search_event_attribution_token|tojson|safe }},
-                productDetails: {{ results_json|tojson|safe }}.map(r => ({ product: { id: r.id } }))
-            };
-            trackEvent(eventPayload);
+            document.addEventListener('DOMContentLoaded', function() {
+                // This event tracks that a user performed a search.
+                // It includes the query, any filters, the results shown, and the attribution token
+                // from the previous page (e.g., autocomplete suggestion click).
+                VibeTracker.trackSearchView(
+                    {{ query|tojson|safe }},
+                    {{ results_json|tojson|safe }},
+                    {{ search_event_attribution_token|tojson|safe }},
+                    {{ search_filter|tojson|safe }}
+                );
+            });
         </script>
     {% endif %}
 {% endblock %}

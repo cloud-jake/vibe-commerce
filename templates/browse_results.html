@@ -46,18 +46,14 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // A browse event is a type of 'search' event with an empty 'searchQuery' and a populated 'pageCategories'.
-    const eventPayload = {
-        eventType: '{{ event_type }}',
-        visitorId: '{{ visitor_id }}',
-        searchQuery: '',
-        pageCategories: {{ page_categories_json | safe }},
-        filter: {{ search_filter|tojson|safe }},
-        attributionToken: '{{ attribution_token }}',
-        // The productDetails for a search event should contain the list of product IDs shown to the user.
-        productDetails: {{ results_json | tojson | safe }}.map(r => ({ product: { id: r.id } }))
-    };
-    trackEvent(eventPayload);
+    // A browse event is a type of 'search' event with an empty 'searchQuery'
+    // and a populated 'pageCategories' field.
+    VibeTracker.trackBrowseView(
+        {{ page_categories_json | safe }},
+        {{ results_json | tojson|safe }},
+        '{{ attribution_token }}',
+        {{ search_filter|tojson|safe }}
+    );
 });
 </script>
 {% endblock %}

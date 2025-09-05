@@ -138,7 +138,7 @@
     // Track that the user has viewed the main category listing page.
     // This is a "category-page-view" event.
     document.addEventListener('DOMContentLoaded', function() {
-        trackEvent({ eventType: 'category-page-view', visitorId: '{{ visitor_id }}' });
+        VibeTracker.trackCategoryPageView();
     });
 </script>
 <style>
