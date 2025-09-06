@@ -22,9 +22,7 @@
             {% elif results %}
                 <div class="product-grid">
                     {% for result in results %}
-                        <div class="product-card">
-                            {{ render_product_card(result, attribution_token) }}
-                        </div>
+                        {{ render_product_card(result, attribution_token) }}
                     {% endfor %}
                 </div>
                 {{ render_pagination(current_page, total_pages, total_results, page_size, results|length, request.path, request.args, attribution_token) }}

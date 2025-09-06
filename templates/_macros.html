@@ -3,14 +3,20 @@
     like product cards, facet sidebars, and pagination.
 #}
 
-{% macro render_product_card(result, attribution_token) %}
+{% macro render_product_card(item, attribution_token) %}
+{#
+    This macro is designed to be flexible. The 'item' can be either:
+    1. A `Product` object (from recommendations on the homepage).
+    2. A `SearchResult` object (from search and browse pages).
+    The logic below handles both cases to extract the product details and the correct ID.
+#}
+{% set product = item.product if item.product is defined else item %}
 <div class="product-card">
-    {# The result object is a SearchResult, which has .id and .product #}
-    <a href="{{ url_for('product_detail', product_id=result.id, attribution_token=attribution_token) }}">
-        <img src="{{ (result.product.images[0].uri if result.product.images) or 'https://prd.place/400?id=' ~ result.id }}" alt="{{ result.product.title or 'Untitled Product' }}">
-        <h3 class="product-title">{{ result.product.title or "Untitled Product" }}</h3>
-        {% if result.product.price_info and result.product.price_info.price is defined and result.product.price_info.price is not none %}
-            <p class="price">${{ "%.2f"|format(result.product.price_info.price) }}</p>
+    <a href="{{ url_for('product_detail', product_id=item.id, attribution_token=attribution_token) }}">
+        <img src="{{ (product.images[0].uri if product.images) or 'https://prd.place/400?id=' ~ item.id }}" alt="{{ product.title or 'Untitled Product' }}">
+        <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
+        {% if product.price_info and product.price_info.price is defined and product.price_info.price is not none %}
+            <p class="price">${{ "%.2f"|format(product.price_info.price) }}</p>
         {% else %}
             <p class="price price-unavailable">Price not available</p>
         {% endif %}
