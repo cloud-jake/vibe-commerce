@@ -9,6 +9,31 @@
 {% endblock %}
 
 {% block content %}
+    <style>
+        /* Styles for the star rating display */
+        .star-rating-summary { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .stars-outer { position: relative; display: inline-block; }
+        .stars-inner { position: absolute; top: 0; left: 0; white-space: nowrap; overflow: hidden; width: 0; }
+        .stars-outer::before, .stars-inner::before {
+            content: "\2605\2605\2605\2605\2605"; /* 5 unicode star characters */
+            font-size: 1.5rem;
+        }
+        .stars-outer::before { color: #e0e0e0; /* Empty star color */ }
+        .stars-inner::before { color: #ffc107; /* Filled star color */ }
+        .star-rating-summary .average-rating-text { font-weight: bold; font-size: 1.1rem; color: #333; }
+        .star-rating-summary .total-ratings-link { font-size: 1rem; color: #555; text-decoration: none; }
+        .star-rating-summary .total-ratings-link:hover { text-decoration: underline; color: #007bff; }
+
+        /* Styles for the rating distribution section */
+        .product-rating-histogram { margin-top: 1.5rem; }
+        .rating-distribution-list { list-style: none; padding: 0; margin: 0; }
+        .rating-distribution-list li { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2px; }
+        .rating-distribution-list .star-level { flex-shrink: 0; width: 50px; font-size: 0.9rem; }
+        .rating-distribution-list .bar-container { flex-grow: 1; background-color: #f0f0f0; border-radius: 4px; height: 16px; overflow: hidden; }
+        .rating-distribution-list .bar { background-color: #ffc107; height: 100%; border-radius: 4px 0 0 4px; }
+        .rating-distribution-list .count-value { flex-shrink: 0; width: 40px; text-align: right; font-size: 0.9rem; color: #555; }
+    </style>
+
     {% if error %}
         <p class="error">An error occurred: {{ error }}</p>
         <p>Could not retrieve product details. Please check the product ID and your configuration.</p>
@@ -19,6 +44,20 @@
             </div>
             <div class="product-info">
                 <h1>{{ product.title or "Product Title Unavailable" }}</h1>
+
+                {% if product.rating and product.rating.rating_count > 0 %}
+                    <div class="star-rating-summary">
+                        <div class="stars-outer">
+                            <div class="stars-inner" style="width: {{ (product.rating.average_rating / 5) * 100 }}%"></div>
+                        </div>
+                        <span class="average-rating-text">{{ "%.1f"|format(product.rating.average_rating) }}</span>
+                        {# This link will jump the user down to the rating distribution chart #}
+                        <a href="#rating-distribution" class="total-ratings-link">
+                            {{ product.rating.rating_count }} ratings
+                        </a>
+                    </div>
+                {% endif %}
+
                 <p class="product-id">Product ID: {{ product.id }}</p>
 
                 {% if product.price_info and product.price_info.currency_code %}
@@ -60,6 +99,25 @@
                         <ul>
                             {% for category in product.categories %}
                                 <li>{{ category }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if product.rating and product.rating.rating_histogram %}
+                    <div class="product-rating-histogram" id="rating-distribution">
+                        <h4>Rating Distribution</h4>
+                        <ul class="rating-distribution-list">
+                            {% set total_ratings = product.rating.rating_count %}
+                            {% for count in product.rating.rating_histogram|reverse %}
+                                {% set star_level = 5 - loop.index0 %}
+                                <li>
+                                    <span class="star-level">{{ star_level }} star{{ 's' if star_level != 1 else '' }}</span>
+                                    <div class="bar-container">
+                                        <div class="bar" style="width: {{ (count / total_ratings) * 100 if total_ratings > 0 else 0 }}%;"></div>
+                                    </div>
+                                    <span class="count-value">{{ count }}</span>
+                                </li>
                             {% endfor %}
                         </ul>
                     </div>
