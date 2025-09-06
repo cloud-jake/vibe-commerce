@@ -202,7 +202,10 @@ def callback():
     try:
         token = oauth.google.authorize_access_token()
         # The user's profile information is in the ID token
-        user_info = oauth.google.parse_id_token(token)
+        # Fetch user info from the userinfo endpoint. This is a more robust
+        # method than parsing the ID token directly, as it avoids potential
+        # issues with 'nonce' handling in different library versions.
+        user_info = oauth.google.userinfo()
         session['user'] = user_info
 
         # IMPORTANT: Use the stable Google user ID as the visitor_id for

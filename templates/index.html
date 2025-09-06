@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_macros.html' import render_product_card %}
 
 {% block title %}Welcome to {{ site_name|default('Vibe Commerce') }}{% endblock %}
 
@@ -15,28 +16,12 @@
     {% elif recommendations %}
         <div class="product-carousel">
             <div class="product-grid">
-                {% for product in recommendations %}
-                    <div class="product-card">
-                        <a href="{{ url_for('product_detail', product_id=product.id, attribution_token=attribution_token) }}">
-                            <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}" alt="{{ product.title or 'Untitled Product' }}">
-                            <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
-                            {% if product.price_info and product.price_info.currency_code %}
-                                <p class="price">${{ "%.2f"|format(product.price_info.price) }}</p>
-                            {% else %}
-                                <p class="price price-unavailable">Price not available</p>
-                            {% endif %}
-                        </a>
-                    </div>
+                {% for item in recommendations %}
+                    {{ render_product_card(item, attribution_token) }}
                 {% endfor %}
             </div>
         </div>
     {% else %}
         <p>No recommendations available at the moment.</p>
     {% endif %}
-{% endblock %}
-
-{% block scripts %}
-    <script>
-        VibeTracker.trackHomePageView();
-    </script>
 {% endblock %}
