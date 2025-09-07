@@ -841,6 +841,9 @@ def api_chat():
         new_conversation_id = response.conversation_id
         user_query_types = set(response.user_query_types)
 
+        # Create a string representation of the query types for debugging.
+        query_types_str = f"[{', '.join(user_query_types)}]"
+
         # De-duplicate refined queries while preserving order, as the streaming
         # API can sometimes send the same suggestions in multiple chunks.
         unique_refined_queries = []
@@ -871,19 +874,19 @@ def api_chat():
         if 'RETAIL_IRRELEVANT' in user_query_types:
             print("INFO: Handling 'RETAIL_IRRELEVANT' query type.")
             bot_response = {
-                'text': "I am a shopping assistant. How can I help you find what you're looking for today?"
+                'text': f"{query_types_str} I am a shopping assistant. How can I help you find what you're looking for today?"
             }
             custom_response_generated = True
         elif 'BLOCKLISTED' in user_query_types:
             print("INFO: Handling 'BLOCKLISTED' query type.")
             bot_response = {
-                'text': "I'm sorry, I cannot fulfill this request."
+                'text': f"{query_types_str} I'm sorry, I cannot fulfill this request."
             }
             custom_response_generated = True
         elif 'QUERY_TYPE_UNSPECIFIED' in user_query_types:
             print("INFO: Handling 'QUERY_TYPE_UNSPECIFIED' query type.")
             bot_response = {
-                'text': "I'm not sure I understand. Could you please rephrase your question? I can help you find products and answer questions about them."
+                'text': f"{query_types_str} I'm not sure I understand. Could you please rephrase your question? I can help you find products and answer questions about them."
             }
             custom_response_generated = True
 
@@ -891,7 +894,7 @@ def api_chat():
         elif 'ORDER_SUPPORT' in user_query_types:
             print("INFO: Handling 'ORDER_SUPPORT' query type.")
             bot_response = {
-                'text': "It looks like you have a question about an order. You can track your order or view your order history on our Orders page.",
+                'text': f"{query_types_str} It looks like you have a question about an order. You can track your order or view your order history on our Orders page.",
                 'page_links': [{'text': "Go to My Orders", 'url': support_links['order_support']}]
             }
             # TODO: Add a call to a separate Order Management System API here.
@@ -899,7 +902,7 @@ def api_chat():
         elif 'DEALS_AND_COUPONS' in user_query_types:
             print("INFO: Handling 'DEALS_AND_COUPONS' query type.")
             bot_response = {
-                'text': "Looking for a good deal? All of our current promotions, discounts, and coupons are available on our deals page.",
+                'text': f"{query_types_str} Looking for a good deal? All of our current promotions, discounts, and coupons are available on our deals page.",
                 'page_links': [{'text': "View Promotions", 'url': support_links['deals_and_coupons']}]
             }
             # TODO: Add a call to a separate Promotions API here.
@@ -907,7 +910,7 @@ def api_chat():
         elif 'STORE_RELEVANT' in user_query_types:
             print("INFO: Handling 'STORE_RELEVANT' query type.")
             bot_response = {
-                'text': "For questions about store locations, hours, or to check product availability, our store finder can help.",
+                'text': f"{query_types_str} For questions about store locations, hours, or to check product availability, our store finder can help.",
                 'page_links': [{'text': "Find a Store", 'url': support_links['store_relevant']}]
             }
             # TODO: Add a call to a separate Store Locator API here.
@@ -915,7 +918,7 @@ def api_chat():
         elif 'RETAIL_SUPPORT' in user_query_types:
             print("INFO: Handling 'RETAIL_SUPPORT' query type.")
             bot_response = {
-                'text': "For questions about purchases, payment methods, returns, or shipping, our support page has the answers.",
+                'text': f"{query_types_str} For questions about purchases, payment methods, returns, or shipping, our support page has the answers.",
                 'page_links': [{'text': "Visit Support", 'url': support_links['retail_support']}]
             }
             # TODO: Add a call to a separate CMS/FAQ API here.
@@ -941,9 +944,12 @@ def api_chat():
             if not conversational_text and 'SIMPLE_PRODUCT_SEARCH' in user_query_types:
                 conversational_text = "Here is what I found for your search."
 
+            # Prepend the query type string for debugging, but only if there's text to show.
+            final_text = f"{query_types_str} {conversational_text}" if conversational_text else ""
+
             bot_response = {
                 'is_user': False,
-                'text': conversational_text,
+                'text': final_text,
                 'followup_question': response.followup_question.followup_question if response.followup_question else None,
                 'refined_queries': unique_refined_queries,
                 'products': [],
