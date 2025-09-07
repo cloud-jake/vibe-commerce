@@ -86,6 +86,15 @@
                             </div>
                         {% endif %}
 
+                        {% if message.page_links %}
+                            <div class="page-links">
+                                {% for link in message.page_links %}
+                                    {# These are direct links, not queries, so they use an <a> tag #}
+                                    <a href="{{ link.url }}" class="page-link-button" target="_blank" rel="noopener noreferrer">{{ link.text }}</a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
                         {% if message.followup_question %}
                             <p class="followup-question">{{ message.followup_question }}</p>
                         {% endif %}
@@ -198,6 +207,13 @@ document.addEventListener('DOMContentLoaded', () => {
             contentHtml += '<div class="refined-queries"><p>You could also try:</p>';
             message.refined_queries.forEach(q => {
                 contentHtml += `<button type="button" class="refined-query-button" data-query="${q}">${q}</button>`;
+            });
+            contentHtml += '</div>';
+        }
+        if (message.page_links && message.page_links.length > 0) {
+            contentHtml += '<div class="page-links">';
+            message.page_links.forEach(link => {
+                contentHtml += `<a href="${link.url}" class="page-link-button" target="_blank" rel="noopener noreferrer">${link.text}</a>`;
             });
             contentHtml += '</div>';
         }
