@@ -345,6 +345,26 @@ def about():
     """Renders the about page."""
     return render_template('about.html')
 
+@app.route('/orders')
+def orders():
+    """Renders the orders page."""
+    return render_template('orders.html')
+
+@app.route('/promotions')
+def promotions():
+    """Renders the promotions page."""
+    return render_template('promotions.html')
+
+@app.route('/stores')
+def stores():
+    """Renders the stores page."""
+    return render_template('stores.html')
+
+@app.route('/support')
+def support():
+    """Renders the support page."""
+    return render_template('support.html')
+
 
 @app.route('/categories')
 def categories_list():
@@ -841,10 +861,10 @@ def api_chat():
         # Placeholder URLs for demonstration purposes. In a real application,
         # these would point to actual pages for orders, deals, etc.
         support_links = {
-            'order_support': url_for('index'),
-            'deals_and_coupons': url_for('index'),
-            'store_relevant': url_for('index'),
-            'retail_support': url_for('about')
+            'order_support': url_for('orders'),
+            'deals_and_coupons': url_for('promotions'),
+            'store_relevant': url_for('stores'),
+            'retail_support': url_for('support')
         }
 
         # Category 1: Irrelevant queries that don't require an LLM answer
@@ -871,32 +891,32 @@ def api_chat():
         elif 'ORDER_SUPPORT' in user_query_types:
             print("INFO: Handling 'ORDER_SUPPORT' query type.")
             bot_response = {
-                'text': "It looks like you have a question about an order. You can check your order status here:",
-                'link_text': "View My Orders", 'link_url': support_links['order_support']
+                'text': "It looks like you have a question about an order. You can track your order or view your order history on our Orders page.",
+                'page_links': [{'text': "Go to My Orders", 'url': support_links['order_support']}]
             }
             # TODO: Add a call to a separate Order Management System API here.
             custom_response_generated = True
         elif 'DEALS_AND_COUPONS' in user_query_types:
             print("INFO: Handling 'DEALS_AND_COUPONS' query type.")
             bot_response = {
-                'text': "Looking for deals? You can find all our current promotions on our deals page.",
-                'link_text': "See All Deals", 'link_url': support_links['deals_and_coupons']
+                'text': "Looking for a good deal? All of our current promotions, discounts, and coupons are available on our deals page.",
+                'page_links': [{'text': "View Promotions", 'url': support_links['deals_and_coupons']}]
             }
             # TODO: Add a call to a separate Promotions API here.
             custom_response_generated = True
         elif 'STORE_RELEVANT' in user_query_types:
             print("INFO: Handling 'STORE_RELEVANT' query type.")
             bot_response = {
-                'text': "If you have questions about our stores, like locations or hours, our store finder can help!",
-                'link_text': "Find a Store", 'link_url': support_links['store_relevant']
+                'text': "For questions about store locations, hours, or to check product availability, our store finder can help.",
+                'page_links': [{'text': "Find a Store", 'url': support_links['store_relevant']}]
             }
             # TODO: Add a call to a separate Store Locator API here.
             custom_response_generated = True
         elif 'RETAIL_SUPPORT' in user_query_types:
             print("INFO: Handling 'RETAIL_SUPPORT' query type.")
             bot_response = {
-                'text': "For questions about returns, shipping, or payment methods, please visit our Help Center.",
-                'link_text': "Visit Help Center", 'link_url': support_links['retail_support']
+                'text': "For questions about purchases, payment methods, returns, or shipping, our support page has the answers.",
+                'page_links': [{'text': "Visit Support", 'url': support_links['retail_support']}]
             }
             # TODO: Add a call to a separate CMS/FAQ API here.
             custom_response_generated = True

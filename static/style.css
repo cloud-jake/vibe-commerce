@@ -720,6 +720,29 @@ footer {
     background-color: #dde2e6;
 }
 
+.page-links {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.page-link-button {
+    background-color: #e9ecef;
+    border: 1px solid #dee2e6;
+    color: var(--primary-color);
+    padding: 6px 12px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s;
+    text-decoration: none;
+}
+
+.page-link-button:hover {
+    background-color: #dde2e6;
+}
+
 .followup-question {
     margin-top: 1rem;
     padding: 12px 16px;
