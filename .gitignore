@@ -29,6 +29,7 @@ venv/
 .DS_Store
 Thumbs.db
 .vscode/
+__*
 
 # Log files
 *.log

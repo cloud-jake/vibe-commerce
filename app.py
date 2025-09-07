@@ -787,10 +787,9 @@ def api_chat():
     if not query:
         return jsonify({"error": "Query cannot be empty"}), 400
 
-    # Add user's message to session history for persistence across reloads
+    # Initialize chat history in session if it doesn't exist
     if 'chat_history' not in session:
         session['chat_history'] = []
-    session['chat_history'].append({'is_user': True, 'text': query})
 
     try:
         # Build the conversational search request
@@ -820,6 +819,7 @@ def api_chat():
             response._pb.MergeFrom(chunk._pb)
 
         new_conversation_id = response.conversation_id
+        user_query_types = set(response.user_query_types)
 
         # De-duplicate refined queries while preserving order, as the streaming
         # API can sometimes send the same suggestions in multiple chunks.
@@ -830,65 +830,200 @@ def api_chat():
                 unique_refined_queries.append(rs.query)
                 seen_queries.add(rs.query)
 
-        # --- Process the response for the template ---
-        bot_response = {
-            'is_user': False,
-            'text': response.conversational_text_response,
-            'followup_question': response.followup_question.followup_question if response.followup_question else None,
-            'refined_queries': unique_refined_queries,
-            'products': []
+        # --- Custom Logic for Specific User Query Types ---
+        # The developer guide specifies that for certain query types, no LLM answer
+        # is provided. We intercept these to provide custom, helpful responses.
+        custom_response_generated = False
+        bot_response = {}
+        products_for_session = []
+        search_response_for_event = None
+
+        # Placeholder URLs for demonstration purposes. In a real application,
+        # these would point to actual pages for orders, deals, etc.
+        support_links = {
+            'order_support': url_for('index'),
+            'deals_and_coupons': url_for('index'),
+            'store_relevant': url_for('index'),
+            'retail_support': url_for('about')
         }
 
-        # If the AI provides refined search queries, fetch products for the first one
-        if response.refined_search:
-            refined_query = response.refined_search[0].query
+        # Category 1: Irrelevant queries that don't require an LLM answer
+        if 'RETAIL_IRRELEVANT' in user_query_types:
+            print("INFO: Handling 'RETAIL_IRRELEVANT' query type.")
+            bot_response = {
+                'text': "I am a shopping assistant. How can I help you find what you're looking for today?"
+            }
+            custom_response_generated = True
+        elif 'BLOCKLISTED' in user_query_types:
+            print("INFO: Handling 'BLOCKLISTED' query type.")
+            bot_response = {
+                'text': "I'm sorry, I cannot fulfill this request."
+            }
+            custom_response_generated = True
+        elif 'QUERY_TYPE_UNSPECIFIED' in user_query_types:
+            print("INFO: Handling 'QUERY_TYPE_UNSPECIFIED' query type.")
+            bot_response = {
+                'text': "I'm not sure I understand. Could you please rephrase your question? I can help you find products and answer questions about them."
+            }
+            custom_response_generated = True
 
-            # Define the same facet specifications as the main search page.
-            # This signals to the API that we need rich product data,
-            # which is crucial for getting fields like priceInfo.
-            facet_specs = [
-                SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands")),
-                SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories")),
-                SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="price")),
-                SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="rating")),
-            ]
+        # Category 2: Support and information queries
+        elif 'ORDER_SUPPORT' in user_query_types:
+            print("INFO: Handling 'ORDER_SUPPORT' query type.")
+            bot_response = {
+                'text': "It looks like you have a question about an order. You can check your order status here:",
+                'link_text': "View My Orders", 'link_url': support_links['order_support']
+            }
+            # TODO: Add a call to a separate Order Management System API here.
+            custom_response_generated = True
+        elif 'DEALS_AND_COUPONS' in user_query_types:
+            print("INFO: Handling 'DEALS_AND_COUPONS' query type.")
+            bot_response = {
+                'text': "Looking for deals? You can find all our current promotions on our deals page.",
+                'link_text': "See All Deals", 'link_url': support_links['deals_and_coupons']
+            }
+            # TODO: Add a call to a separate Promotions API here.
+            custom_response_generated = True
+        elif 'STORE_RELEVANT' in user_query_types:
+            print("INFO: Handling 'STORE_RELEVANT' query type.")
+            bot_response = {
+                'text': "If you have questions about our stores, like locations or hours, our store finder can help!",
+                'link_text': "Find a Store", 'link_url': support_links['store_relevant']
+            }
+            # TODO: Add a call to a separate Store Locator API here.
+            custom_response_generated = True
+        elif 'RETAIL_SUPPORT' in user_query_types:
+            print("INFO: Handling 'RETAIL_SUPPORT' query type.")
+            bot_response = {
+                'text': "For questions about returns, shipping, or payment methods, please visit our Help Center.",
+                'link_text': "Visit Help Center", 'link_url': support_links['retail_support']
+            }
+            # TODO: Add a call to a separate CMS/FAQ API here.
+            custom_response_generated = True
 
-            # Ensure query expansion is enabled to get full product details,
-            # mirroring the behavior of the main search page. A more basic
-            # request may result in fewer fields being returned.
-            query_expansion_spec = SearchRequest.QueryExpansionSpec(
-                condition=SearchRequest.QueryExpansionSpec.Condition.AUTO,
-                pin_unexpanded_results=True
-            )
+        if custom_response_generated:
+            # For custom responses, we build a simple bot_response dictionary
+            bot_response.update({
+                'is_user': False, 'followup_question': None, 'refined_queries': [],
+                'products': [], 'user_query_types': list(user_query_types)
+            })
+        else:
+            # --- Standard Flow: Process LLM response and fetch products. ---
+            # This handles SIMPLE_PRODUCT_SEARCH, PRODUCT_DETAILS, PRODUCT_COMPARISON,
+            # BEST_PRODUCT, and INTENT_REFINEMENT query types.
 
-            search_req = SearchRequest(
-                placement=search_placement,
-                branch=branch_path,
-                query=refined_query,
-                visitor_id=session.get('visitor_id'),
-                page_size=3,
-                query_expansion_spec=query_expansion_spec,
-                facet_specs=facet_specs,
-            )
-            search_pager = search_client.search(request=search_req)
+            # Log the query types being handled in this standard flow.
+            for query_type in user_query_types:
+                print(f"INFO: Handling '{query_type}' query type.")
+
+            # For SIMPLE_PRODUCT_SEARCH, there's no LLM text. Provide a default for better UX.
+            conversational_text = response.conversational_text_response
+            if not conversational_text and 'SIMPLE_PRODUCT_SEARCH' in user_query_types:
+                conversational_text = "Here is what I found for your search."
+
+            bot_response = {
+                'is_user': False,
+                'text': conversational_text,
+                'followup_question': response.followup_question.followup_question if response.followup_question else None,
+                'refined_queries': unique_refined_queries,
+                'products': [],
+                'user_query_types': list(user_query_types)
+            }
+
+            if response.refined_search:
+                refined_query = response.refined_search[0].query
+                facet_specs = [
+                    SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands")),
+                    SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories")),
+                    SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="price")),
+                    SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="rating")),
+                ]
+                query_expansion_spec = SearchRequest.QueryExpansionSpec(condition=SearchRequest.QueryExpansionSpec.Condition.AUTO, pin_unexpanded_results=True)
+                search_req = SearchRequest(
+                    placement=search_placement, branch=branch_path, query=refined_query,
+                    visitor_id=session.get('visitor_id'), page_size=3,
+                    query_expansion_spec=query_expansion_spec, facet_specs=facet_specs,
+                )
+                search_pager = search_client.search(request=search_req)
+                search_response_for_event = next(search_pager.pages, None)
+
+                if search_response_for_event:
+                    for r in search_response_for_event.results:
+                        product_dict = SearchResponse.SearchResult.to_dict(r)
+                        # The product data is nested inside the 'product' key of the search result.
+                        simplified_product = {
+                            'id': product_dict.get('id'),
+                            'product': product_dict.get('product', {})
+                        }
+                        products_for_session.append(simplified_product)
             
-            products_for_session = []
-            for r in search_pager.results:
-                product_dict = SearchResponse.SearchResult.to_dict(r)
-                # --- DEBUG --- Print the full product dictionary from the API
-                ## print(f"DEBUG (Chat API): Product data received: {json.dumps(product_dict, indent=2)}")
-                # The product data is nested inside the 'product' key of the search result.
-                # We can simplify the logic by assigning this dictionary directly.
-                simplified_product = {
-                    'id': product_dict.get('id'),
-                    'product': product_dict.get('product', {})
-                }
-                products_for_session.append(simplified_product)
             bot_response['products'] = products_for_session
+            
+        # --- Track Conversational Search Event ---
+        # A conversational search is tracked as a 'search' event. It's crucial
+        # to include the attributionToken from the secondary search response to link
+        # this event to the model's output and the products that were shown.
+        try:
+            parent = user_event_client.catalog_path(
+                project=config.PROJECT_ID,
+                location=config.LOCATION,
+                catalog=config.CATALOG_ID
+            )
 
-        # Add bot's response to session history
-        session['chat_history'].append(bot_response)
+            # Extract product IDs from the results for the event payload
+            product_ids = [p['id'] for p in products_for_session]
+            product_details_list = [{"product": {"id": pid}} for pid in product_ids]
+
+            user_info = {
+                "userAgent": request.user_agent.string,
+                "ipAddress": request.remote_addr
+            }
+            if session.get('user'):
+                user_info["userId"] = session['user']['sub']
+
+            # The attribution token comes from the secondary search response, not the conversational one.
+            event_attribution_token = search_response_for_event.attribution_token if search_response_for_event else None
+
+            event_payload = {
+                "eventType": "search",
+                "visitorId": session.get('visitor_id'),
+                "userInfo": user_info,
+                "searchQuery": query,
+                "attributionToken": event_attribution_token,
+                "productDetails": product_details_list,
+                # The UserEvent object uses 'sessionId' to group related events.
+                # We can use the 'conversation_id' from the chat response for this purpose.
+                "sessionId": new_conversation_id,
+                "uri": url_for('chat', _external=True),
+                "referrerUri": request.referrer,
+            }
+
+            user_event = UserEvent.from_json(json.dumps(event_payload))
+            write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
+            user_event_client.write_user_event(request=write_request)
+            print(f"Successfully wrote conversational search event for visitor {session.get('visitor_id')}")
+
+        except Exception as e:
+            # Log the error but don't block the user's chat experience
+            print(f"Error writing conversational search event: {e}\n{traceback.format_exc()}")
+
+        # Create a lightweight version of the bot response for session storage
+        # to avoid exceeding cookie size limits. The full product data is sent
+        # to the client for rendering but not persisted in the session cookie,
+        # which prevents the session from breaking on long conversations.
+        session_bot_response = bot_response.copy()
+        session_bot_response['products'] = []  # Remove heavy product data for session
+
+        # Add the user's message and the lightweight bot response to session history
+        session['chat_history'].extend([
+            {'is_user': True, 'text': query},
+            session_bot_response
+        ])
         session.modified = True
+        
+        # Persist the conversation ID in the server-side session to maintain
+        # context across page reloads, ensuring consistency with chat history.
+        session['conversation_id'] = new_conversation_id
 
         # Return the bot's response and new conversation ID to the client
         return jsonify({
@@ -898,8 +1033,11 @@ def api_chat():
 
     except (GoogleAPICallError, Exception) as e:
         error_message = "Sorry, I encountered an error. Please try again."
-        # Add error to session history
-        session['chat_history'].append({'is_user': False, 'text': error_message})
+        # Add the user's message and the error response to session history
+        session['chat_history'].extend([
+            {'is_user': True, 'text': query},
+            {'is_user': False, 'text': error_message}
+        ])
         session.modified = True
         print(f"Error during conversational search: {e}\n{traceback.format_exc()}")
         # Return error to client
