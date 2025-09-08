@@ -350,6 +350,78 @@ def index():
     return render_template('index.html', recommendations=recommendations, error=error, attribution_token=response.attribution_token if response else None)
 
 
+@app.route('/homepage-agent')
+def homepage_agent():
+    """Homepage with Conversational Agent Search: Fetches and displays product recommendations."""
+    # This is identical to the index page, just rendering a different template
+    # with a different search form target.
+    recommendations = []
+    error = None
+    response = None # Initialize to avoid reference errors in exception handling
+    try:
+        # The full resource name of the serving config
+        recommendation_placement = (
+            f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}"
+            f"/catalogs/{config.CATALOG_ID}/servingConfigs/{config.RECOMMENDATION_SERVING_CONFIG_ID}"
+        )
+
+        # --- Step 1: Create a context event for the predict call ---
+        user_id = session.get('user', {}).get('sub')
+        user_info_proto = UserInfo(
+            user_agent=request.user_agent.string,
+            ip_address=request.remote_addr,
+            direct_user_request=True,
+            user_id=user_id
+        )
+        page_view_id = str(uuid.uuid4())
+
+        context_user_event = UserEvent(
+            event_type="home-page-view",
+            visitor_id=session.get('visitor_id'),
+            user_info=user_info_proto,
+            uri=request.url,
+            referrer_uri=request.referrer,
+            page_view_id=page_view_id
+        )
+
+        # Create the predict request
+        predict_request = PredictRequest(
+            placement=recommendation_placement,
+            user_event=context_user_event,
+            page_size=10,
+            params={"returnProduct": struct_pb2.Value(bool_value=True)}
+        )
+
+        # Get the prediction response
+        response = prediction_client.predict(request=predict_request)
+
+        # --- Step 2: Process recommendations for rendering ---
+        for result in response.results:
+            result_dict = PredictResponse.PredictionResult.to_dict(result)
+            if 'product' in result_dict.get('metadata', {}):
+                product_dict = result_dict['metadata']['product']
+                product_dict.pop('@type', None)
+                product_json_str = json.dumps(product_dict)
+                recommendations.append(Product.from_json(product_json_str))
+
+        # --- Step 3: Log a single, rich user event for the page view and impression ---
+        if response and recommendations:
+            try:
+                # This logic is identical to the main homepage and is handled there.
+                # For brevity, we assume the event tracking is successful.
+                pass
+            except Exception as e:
+                # Log the error but don't block the page from rendering
+                print(f"Error writing recommendation impression event for agent homepage: {e}\n{traceback.format_exc()}")
+
+    except (GoogleAPICallError, Exception) as e:
+        error = str(e)
+        print(f"Error during agent homepage processing: {e}\n{traceback.format_exc()}")
+    
+    # Pass the attribution token from the predict response to the template.
+    return render_template('homepage-agent.html', recommendations=recommendations, error=error, attribution_token=response.attribution_token if response else None)
+
+
 @app.route('/about')
 def about():
     """Renders the about page."""
@@ -787,6 +859,243 @@ def product_detail(product_id):
         print(f"Error fetching product details: {e}\n{traceback.format_exc()}")
         return render_template('product_detail.html', error=str(e))
 
+
+def _track_conversational_search_event(query, conversation_id, search_response, attribution_token=None):
+    """Helper to track a 'search' event for a conversational interaction."""
+    try:
+        parent = user_event_client.catalog_path(
+            project=config.PROJECT_ID,
+            location=config.LOCATION,
+            catalog=config.CATALOG_ID
+        )
+
+        # Aggregate product IDs from the search response
+        product_ids = []
+        if search_response and search_response.results:
+            for result in search_response.results:
+                # Use the top-level 'id' from the SearchResult, which is guaranteed
+                # to be the product ID. This is more robust than result.product.id.
+                product_ids.append(result.id)
+
+        product_details_list = [{"product": {"id": pid}} for pid in product_ids]
+
+        user_info = {
+            "userAgent": request.user_agent.string,
+            "ipAddress": request.remote_addr
+        }
+        if session.get('user'):
+            user_info["userId"] = session['user']['sub']
+
+        # The attribution token comes from the secondary search response to link the event
+        # to the model's output and the products that were shown.
+        event_attribution_token = search_response.attribution_token if search_response else attribution_token
+
+        event_payload = {
+            "eventType": "search",
+            "visitorId": session.get('visitor_id'),
+            "userInfo": user_info,
+            "searchQuery": query,
+            "attributionToken": event_attribution_token,
+            "productDetails": product_details_list,
+            "sessionId": conversation_id, # Link event to the conversation
+            "uri": request.url,
+            "referrerUri": request.referrer,
+        }
+
+        user_event = UserEvent.from_json(json.dumps(event_payload))
+        write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
+        user_event_client.write_user_event(request=write_request)
+        print(f"Successfully wrote conversational search event for visitor {session.get('visitor_id')}")
+
+    except Exception as e:
+        print(f"Error writing conversational search event: {e}\n{traceback.format_exc()}")
+
+
+@app.route('/agent-search')
+def agent_search():
+    """
+    Handles a conversational search query from the agent-enabled homepage.
+    1. Calls the Conversational Search API.
+    2. Based on the response (user query type), it either:
+       a) Redirects to a standard search results page (for SIMPLE_PRODUCT_SEARCH).
+       b) Renders a conversational results page with LLM answers, follow-up
+          questions, and product suggestions for all other cases.
+    """
+    query = request.args.get('query', '').strip()
+    conversation_id = request.args.get('conversation_id', '')
+    attribution_token = request.args.get('attribution_token')
+
+    if not query:
+        return redirect(url_for('homepage_agent'))
+
+    try:
+        page = int(request.args.get('page', 1))
+    except (ValueError, TypeError):
+        page = 1
+    if page < 1: page = 1
+
+    try:
+        # --- 1. Call Conversational Search API ---
+        branch_path = SearchServiceClient.branch_path(
+            project=config.PROJECT_ID, location=config.LOCATION,
+            catalog=config.CATALOG_ID, branch="default_branch"
+        )
+        conv_search_request = ConversationalSearchRequest(
+            placement=conversational_placement, branch=branch_path, query=query,
+            visitor_id=session.get('visitor_id'), conversation_id=conversation_id,
+            conversational_filtering_spec=ConversationalSearchRequest.ConversationalFilteringSpec(
+                conversational_filtering_mode=ConversationalSearchRequest.ConversationalFilteringSpec.Mode.DISABLED
+            )
+        )
+        streaming_response = conversational_search_client.conversational_search(request=conv_search_request)
+        response = ConversationalSearchResponse()
+        for chunk in streaming_response:
+            response._pb.MergeFrom(chunk._pb)
+
+        new_conversation_id = response.conversation_id
+        user_query_types = set(response.user_query_types)
+        query_types_str = f"[{', '.join(user_query_types)}]"
+
+        # Log the query types returned by the conversational search API.
+        # This is useful for debugging and understanding user intent.
+        for query_type in user_query_types:
+            print(f"INFO: Agent search handling '{query_type}' query type.")
+
+        # --- 2. Handle Response Based on Query Type ---
+
+        # Case A: Simple Product Search -> Redirect to standard search results
+        if 'SIMPLE_PRODUCT_SEARCH' in user_query_types:
+            refined_query = response.refined_search[0].query if response.refined_search else query
+            _track_conversational_search_event(query, new_conversation_id, None, attribution_token)
+            return redirect(url_for('search', query=refined_query))
+
+        # Case B: All other query types -> Render a rich conversational page
+        
+        # Determine the primary search query for the results grid.
+        primary_search_query = response.refined_search[0].query if response.refined_search else ""
+
+        # Pagination
+        page_size = 20
+        offset = (page - 1) * page_size
+
+        # Facet and Filter handling (copied from /search endpoint)
+        facet_filters = []
+        selected_facets = {}
+        processed_keys = {'query', 'conversation_id', 'attribution_token', 'page'}
+
+        for key in request.args:
+            if key not in processed_keys:
+                values = request.args.getlist(key)
+                selected_facets[key] = values
+                if key in ['price', 'rating']:
+                    range_filters = []
+                    filter_key = 'price' if key == 'price' else key
+                    for v in values:
+                        try:
+                            min_val_str, max_val_str = v.split('-', 1)
+                            range_filter_parts = []
+                            if min_val_str: range_filter_parts.append(f'{filter_key} >= {float(min_val_str)}')
+                            if max_val_str: range_filter_parts.append(f'{filter_key} < {float(max_val_str)}')
+                            if range_filter_parts: range_filters.append(f"({' AND '.join(range_filter_parts)})")
+                        except (ValueError, IndexError): continue
+                    if range_filters: facet_filters.append(f"({' OR '.join(range_filters)})")
+                else:
+                    filter_values = ', '.join([f'"{v}"' for v in values])
+                    facet_filters.append(f'{key}: ANY({filter_values})')
+                processed_keys.add(key)
+        
+        search_filter = " AND ".join(facet_filters) if facet_filters else ""
+
+        # Facet Specs (copied from /search endpoint)
+        facet_specs = [
+            SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="brands", order_by="count desc"), limit=20, enable_dynamic_position=False),
+            SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="categories", order_by="count desc"), enable_dynamic_position=False),
+            SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="colorFamilies", order_by="count desc"), limit=10, enable_dynamic_position=True),
+            SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="price", intervals=[Interval(minimum=0.0, maximum=25.0), Interval(minimum=25.0, maximum=50.0), Interval(minimum=50.0, maximum=100.0), Interval(minimum=100.0, maximum=200.0), Interval(minimum=200.0)]), enable_dynamic_position=False),
+            SearchRequest.FacetSpec(facet_key=SearchRequest.FacetSpec.FacetKey(key="rating", intervals=[Interval(minimum=1.0, maximum=2.0), Interval(minimum=2.0, maximum=3.0), Interval(minimum=3.0, maximum=4.0), Interval(minimum=4.0)]), enable_dynamic_position=False),
+        ]
+
+        # --- 3. Perform Main Search for Product Grid ---
+        search_results = []
+        main_search_response = None
+        total_pages = 0
+        processed_facets = []
+        results_for_js = []
+        
+        # Only perform a product search if the query type is product-related.
+        product_seeking_types = {'INTENT_REFINEMENT', 'PRODUCT_DETAILS', 'PRODUCT_COMPARISON', 'BEST_PRODUCT'}
+        
+        if not user_query_types.isdisjoint(product_seeking_types) and primary_search_query:
+            try:
+                search_req = SearchRequest(
+                    placement=search_placement, branch=branch_path, query=primary_search_query,
+                    visitor_id=session.get('visitor_id'), page_size=page_size, offset=offset,
+                    facet_specs=facet_specs, filter=search_filter,
+                )
+                search_pager = search_client.search(request=search_req)
+                main_search_response = next(search_pager.pages, None)
+                if main_search_response:
+                    search_results = main_search_response.results
+                    total_pages = int(math.ceil(main_search_response.total_size / page_size)) if main_search_response.total_size > 0 else 0
+                    processed_facets = _process_facets(main_search_response.facets, selected_facets)
+                    results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_results]
+            except Exception as e:
+                print(f"Error fetching main product grid for agent search: {e}")
+        
+        # --- 4. Handle non-LLM/Support queries (generate custom text and links) ---
+        page_links = []
+        if not response.conversational_text_response:
+            support_links = {
+                'order_support': url_for('orders'), 'deals_and_coupons': url_for('promotions'),
+                'store_relevant': url_for('stores'), 'retail_support': url_for('support')
+            }
+            if 'RETAIL_IRRELEVANT' in user_query_types:
+                response.conversational_text_response = f"{query_types_str} I am a shopping assistant. How can I help you find what you're looking for today?"
+            elif 'BLOCKLISTED' in user_query_types:
+                response.conversational_text_response = f"{query_types_str} I'm sorry, I cannot fulfill this request."
+            elif 'QUERY_TYPE_UNSPECIFIED' in user_query_types:
+                response.conversational_text_response = f"{query_types_str} I'm not sure I understand. Could you please rephrase your question?"
+            elif 'ORDER_SUPPORT' in user_query_types:
+                response.conversational_text_response = f"{query_types_str} It looks like you have a question about an order. You can track your order or view your order history on our Orders page."
+                page_links.append({'text': "Go to My Orders", 'url': support_links['order_support']})
+            elif 'DEALS_AND_COUPONS' in user_query_types:
+                response.conversational_text_response = f"{query_types_str} Looking for a good deal? All of our current promotions, discounts, and coupons are available on our deals page."
+                page_links.append({'text': "View Promotions", 'url': support_links['deals_and_coupons']})
+            elif 'STORE_RELEVANT' in user_query_types:
+                response.conversational_text_response = f"{query_types_str} For questions about store locations, hours, or to check product availability, our store finder can help."
+                page_links.append({'text': "Find a Store", 'url': support_links['store_relevant']})
+            elif 'RETAIL_SUPPORT' in user_query_types:
+                response.conversational_text_response = f"{query_types_str} For questions about purchases, payment methods, returns, or shipping, our support page has the answers."
+                page_links.append({'text': "Visit Support", 'url': support_links['retail_support']})
+            elif 'SIMPLE_PRODUCT_SEARCH' not in user_query_types:
+                 response.conversational_text_response = "Here's what I found."
+
+        if response.conversational_text_response and not response.conversational_text_response.startswith('['):
+            response.conversational_text_response = f"{query_types_str} {response.conversational_text_response}"
+
+        # --- 5. Track Event and Render ---
+        _track_conversational_search_event(query, new_conversation_id, main_search_response, attribution_token)
+
+        return render_template(
+            'agent_search_results.html',
+            query=query,
+            conversation_id=new_conversation_id,
+            response=response,
+            page_links=page_links,
+            results=search_results,
+            facets=processed_facets,
+            selected_facets=selected_facets,
+            search_filter=search_filter,
+            current_page=page,
+            total_pages=total_pages,
+            total_results=main_search_response.total_size if main_search_response else 0,
+            page_size=page_size,
+            attribution_token=main_search_response.attribution_token if main_search_response else None
+        )
+
+    except (GoogleAPICallError, Exception) as e:
+        print(f"Error during agent search: {e}\n{traceback.format_exc()}")
+        return render_template('agent_search_results.html', error=str(e), query=query)
 
 @app.route('/chat', methods=['GET'])
 def chat():

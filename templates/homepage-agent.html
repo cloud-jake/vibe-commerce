@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from '_macros.html' import render_product_card %}
+
+{% block title %}Vibe Commerce Agent{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome to {{ site_name }}</h1>
+        <p class="text-lg text-gray-600">Ask me anything about our products.</p>
+    </div>
+
+    <h2>Recommended For You</h2>
+
+    {% if error %}
+        <p class="error">Could not load recommendations: {{ error }}</p>
+    {% elif recommendations %}
+        <div class="product-carousel">
+            <div class="product-grid">
+                {% for product in recommendations %}
+                    {{ render_product_card(product, attribution_token) }}
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <p>No recommendations available at the moment.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mainSearchForm = document.getElementById('main-search-form');
+    const mainQueryInput = mainSearchForm.querySelector('input[name="query"]');
+
+    if (mainSearchForm) {
+        // Change the form's action to point to the agent search endpoint
+        mainSearchForm.action = '{{ url_for("agent_search") }}';
+
+        // Update the placeholder text to be more conversational
+        mainQueryInput.placeholder = 'Help me plan a party...';
+    }
+});
+</script>
+{% endblock %}
