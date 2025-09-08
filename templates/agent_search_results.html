@@ -54,15 +54,22 @@
                         {% endif %}
 
                         {# For a follow-up question, show the question and a dedicated input form #}
-                        {% if response.followup_question.followup_question %}
-                        <p class="followup-question">{{ response.followup_question.followup_question }}</p>
-                        <div class="chat-input-area" style="padding: 10px 0 0 0; border-top: 1px solid #e0e0e0; background: transparent;">
-                            <form action="{{ url_for('agent_search') }}" method="get" class="chat-form" id="followup-form">
-                                <input type="hidden" name="conversation_id" value="{{ conversation_id }}">
-                                <textarea name="query" placeholder="Answer here..." required rows="1" style="resize: none; overflow-y: hidden;"></textarea>
-                                <button type="submit" title="Send"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg></button>
-                            </form>
-                        </div>
+                        {% set has_followup = response.followup_question.followup_question %}
+                        {% set has_content = response.conversational_text_response or page_links or response.refined_search|length > 1 %}
+
+                        {% if has_followup %}
+                            <p class="followup-question">{{ response.followup_question.followup_question }}</p>
+                        {% endif %}
+
+                        {# Show input for a follow-up question, or if the agent response is collapsed (i.e., for a simple search). #}
+                        {% if has_followup or collapse_agent_response %}
+                            <div class="chat-input-area" style="padding: 10px 0 0 0; {% if has_content or has_followup %}border-top: 1px solid #e0e0e0;{% endif %} background: transparent;">
+                                <form action="{{ url_for('agent_search') }}" method="get" class="chat-form" id="followup-form">
+                                    <input type="hidden" name="conversation_id" value="{{ conversation_id }}">
+                                    <textarea name="query" placeholder="{{ 'Answer here...' if has_followup else 'Continue the conversation...' }}" required rows="1" style="resize: none; overflow-y: hidden;"></textarea>
+                                    <button type="submit" title="Send"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg></button>
+                                </form>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
