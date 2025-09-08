@@ -4,12 +4,109 @@
 
 {% block content %}
 <div class="container my-5">
+    <div class="text-center mb-5">
+        <h1 class="mb-3">Find a Vibe Commerce Store</h1>
+        <p class="lead">Find store hours, services, and directions to a store near you.</p>
+    </div>
+
+    <!-- Store Search Bar -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+            <form class="d-flex">
+                <input class="form-control form-control-lg me-2" type="search" placeholder="Enter ZIP code or city, state" aria-label="Find a store">
+                <button class="btn btn-primary btn-lg" type="submit">Find</button>
+            </form>
+        </div>
+    </div>
+
     <div class="row">
-        <div class="col-lg-10 mx-auto">
-            <h1 class="mb-4">Store Locator</h1>
-            <p class="lead">This page will help you find store locations, hours, and check product availability.</p>
-            <p>Our store finder is coming soon!</p>
+        <!-- Store List -->
+        <div class="col-lg-5">
+            <h3 class="mb-3">Stores Near You</h3>
+            <div class="list-group store-list">
+                <!-- Store 1 -->
+                <a href="#" class="list-group-item list-group-item-action flex-column align-items-start store-card">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Vibe Commerce - Downtown</h5>
+                        <small>2.5 mi</small>
+                    </div>
+                    <p class="mb-1">123 Main St, Anytown, USA 12345</p>
+                    <p class="mb-2 text-muted">(555) 123-4567</p>
+                    <p class="mb-2"><strong class="text-success">Open</strong> until 10:00 PM</p>
+                    <div class="store-services mb-3">
+                        <span class="badge bg-secondary">Order Pickup</span>
+                        <span class="badge bg-secondary">Drive Up</span>
+                        <span class="badge bg-secondary">Fresh Grocery</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary">Make This My Store</button>
+                </a>
+                <!-- Store 2 -->
+                <a href="#" class="list-group-item list-group-item-action flex-column align-items-start store-card active">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Vibe Commerce - Westside</h5>
+                        <small>5.1 mi</small>
+                    </div>
+                    <p class="mb-1">456 Oak Ave, Westville, USA 67890</p>
+                    <p class="mb-2 text-muted">(555) 987-6543</p>
+                    <p class="mb-2"><strong class="text-success">Open</strong> until 10:00 PM</p>
+                    <div class="store-services mb-3">
+                        <span class="badge bg-secondary">Order Pickup</span>
+                        <span class="badge bg-secondary">Drive Up</span>
+                    </div>
+                    <button class="btn btn-sm btn-primary">My Store</button>
+                </a>
+                <!-- Store 3 -->
+                <a href="#" class="list-group-item list-group-item-action flex-column align-items-start store-card">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Vibe Commerce - Northpoint</h5>
+                        <small>8.9 mi</small>
+                    </div>
+                    <p class="mb-1">789 Pine Ln, Northwood, USA 10112</p>
+                    <p class="mb-2 text-muted">(555) 246-8135</p>
+                    <p class="mb-2"><strong class="text-danger">Closed</strong> - Opens 8:00 AM</p>
+                    <div class="store-services mb-3">
+                        <span class="badge bg-secondary">Order Pickup</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary">Make This My Store</button>
+                </a>
+            </div>
+        </div>
+
+        <!-- Map Placeholder -->
+        <div class="col-lg-7">
+            <div class="map-placeholder">
+                <img src="https://storage.googleapis.com/partarch-ecommerce-demo-images/misc/map-placeholder.png" alt="Map of store locations" class="img-fluid rounded">
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    .store-list {
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+    .store-card {
+        padding: 1.5rem;
+    }
+    .store-card.active {
+        border-left: 5px solid var(--primary-color);
+    }
+    .store-services .badge {
+        font-weight: 500;
+    }
+    .map-placeholder {
+        position: sticky;
+        top: 20px;
+        height: 60vh;
+    }
+    .map-placeholder img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+</style>
 {% endblock %}

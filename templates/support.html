@@ -4,12 +4,79 @@
 
 {% block content %}
 <div class="container my-5">
-    <div class="row">
-        <div class="col-lg-10 mx-auto">
-            <h1 class="mb-4">Help & Support</h1>
-            <p class="lead">This page will provide support for topics like returns, shipping, and payment methods.</p>
-            <p>Our comprehensive help center will be available here shortly.</p>
+    <div class="text-center mb-5">
+        <h1 class="mb-3">Help Center</h1>
+        <p class="lead">Find answers to common questions about our products and services.</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Orders & Returns</h5>
+                    <p class="card-text">Track, return, or get help with a recent order.</p>
+                    <a href="{{ url_for('orders') }}" class="btn btn-primary">Go to Order Support</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Shipping & Delivery</h5>
+                    <p class="card-text">Learn about shipping options, costs, and delivery times.</p>
+                    <a href="#" class="btn btn-outline-primary">View Shipping Details</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Payment Options</h5>
+                    <p class="card-text">We accept all major credit cards and digital wallets.</p>
+                    <a href="#" class="btn btn-outline-primary">Learn About Payments</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Promotions & Coupons</h5>
+                    <p class="card-text">Find our latest deals and learn how to apply coupon codes.</p>
+                    <a href="{{ url_for('promotions') }}" class="btn btn-outline-primary">View Promotions</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Account Settings</h5>
+                    <p class="card-text">Manage your profile, addresses, and login information.</p>
+                    <a href="#" class="btn btn-outline-primary">Manage Your Account</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Contact Us</h5>
+                    <p class="card-text">Can't find what you're looking for? We're here to help.</p>
+                    <a href="#" class="btn btn-outline-primary">Get in Touch</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    .support-topic-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .support-topic-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+</style>
 {% endblock %}
