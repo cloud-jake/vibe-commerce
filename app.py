@@ -952,6 +952,18 @@ def agent_search():
         for chunk in streaming_response:
             response._pb.MergeFrom(chunk._pb)
 
+        # De-duplicate refined searches from the streaming API response while
+        # preserving order. The streaming API can sometimes send the same
+        # suggestions in multiple chunks.
+        unique_refined_search = []
+        seen_queries = set()
+        for rs in response.refined_search:
+            if rs.query not in seen_queries:
+                unique_refined_search.append(rs)
+                seen_queries.add(rs.query)
+        del response.refined_search[:] # Clear the original repeated field
+        response.refined_search.extend(unique_refined_search) # Add unique items back
+
         new_conversation_id = response.conversation_id
         user_query_types = set(response.user_query_types)
         query_types_str = f"[{', '.join(user_query_types)}]"
