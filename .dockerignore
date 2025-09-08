@@ -13,6 +13,7 @@ Dockerfile
 # Ignore the local Python virtual environment. Dependencies will be installed
 # inside the container based on requirements.txt.
 venv/
+.venv/
 
 # Ignore Python cache and build artifacts
 __pycache__/
