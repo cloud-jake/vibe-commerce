@@ -4,12 +4,111 @@
 
 {% block content %}
 <div class="container my-5">
-    <div class="row">
-        <div class="col-lg-10 mx-auto">
-            <h1 class="mb-4">My Orders</h1>
-            <p class="lead">This page will display your order history and allow you to track your orders.</p>
-            <p>Content for order support, such as tracking and order status, will be available here soon.</p>
+    <div class="text-center mb-5">
+        <h1 class="mb-3">Order Status & Support</h1>
+        <p class="lead">Look up an order, start a return, or get help with a recent purchase.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card mb-5">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-3">Look up an order</h5>
+                    <p class="card-text text-muted">Enter your order number and the email address used to place the order.</p>
+                    <form>
+                        <div class="mb-3">
+                            <label for="orderNumber" class="form-label">Order Number</label>
+                            <input type="text" class="form-control" id="orderNumber" placeholder="e.g., 123-4567890-1234567">
+                        </div>
+                        <div class="mb-3">
+                            <label for="orderEmail" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="orderEmail" placeholder="you@example.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Find Order</button>
+                    </form>
+                    <hr>
+                    <p class="text-center mb-0">
+                        {% if user %}
+                            Viewing your order history is easy.
+                            <a href="#">View all orders</a>
+                        {% else %}
+                            <a href="{{ url_for('login') }}">Sign in</a> for easy access to your order history.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="text-center mb-4">Common Questions</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Track an Order</h5>
+                    <p class="card-text">Follow your package from our warehouse to your door.</p>
+                    <a href="#" class="btn btn-outline-primary">Get Tracking Info</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Returns & Exchanges</h5>
+                    <p class="card-text">Start a return, print a label, or learn about our return policy.</p>
+                    <a href="#" class="btn btn-outline-primary">Start a Return</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Shipping & Delivery</h5>
+                    <p class="card-text">Learn about shipping options, costs, and delivery times.</p>
+                    <a href="#" class="btn btn-outline-primary">View Shipping Details</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Damaged or Missing Items</h5>
+                    <p class="card-text">Report an issue with an item you received.</p>
+                    <a href="#" class="btn btn-outline-primary">Report an Issue</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Cancellations</h5>
+                    <p class="card-text">Find out if you can cancel an order or item.</p>
+                    <a href="#" class="btn btn-outline-primary">Learn About Cancellations</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center support-topic-card">
+                <div class="card-body">
+                    <h5 class="card-title">Invoices & Receipts</h5>
+                    <p class="card-text">View or print an invoice for your order.</p>
+                    <a href="#" class="btn btn-outline-primary">Find Your Invoice</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    .support-topic-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .support-topic-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+</style>
 {% endblock %}
