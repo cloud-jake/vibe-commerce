@@ -6,22 +6,7 @@
 <div class="chat-container">
     <div class="chat-history" id="chat-history">
         {% if not chat_history %}
-            <div class="chat-message bot-message">
-                <div class="bot-icon-wrapper">
-                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="geminiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#4285F4">
-                                <animate attributeName="stop-color" values="#4285F4; #9B72F9; #EA4335; #FBBC05; #34A853; #4285F4" dur="4s" repeatCount="indefinite"></animate>
-                            </stop>
-                            <stop offset="100%" stop-color="#9B72F9">
-                                <animate attributeName="stop-color" values="#9B72F9; #EA4335; #FBBC05; #34A853; #4285F4; #9B72F9" dur="4s" repeatCount="indefinite"></animate>
-                            </stop>
-                            </linearGradient>
-                        </defs>
-                        <path fill="url(#geminiGradient)" d="M12 2L13.5 10.5L22 12L13.5 13.5L12 22L10.5 13.5L2 12L10.5 10.5L12 2Z"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="6s" repeatCount="indefinite"/></path>
-                    </svg>
-                </div>
+            <div class="chat-message bot-message">                
                 <div class="bot-message-content">
                     <p>Welcome to the Vibe Commerce AI assistant! How can I help you find the perfect product today?</p>
                 </div>
@@ -34,21 +19,6 @@
                 </div>
             {% else %}
                 <div class="chat-message bot-message">
-                    <div class="bot-icon-wrapper">
-                        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <linearGradient id="geminiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#4285F4">
-                                    <animate attributeName="stop-color" values="#4285F4; #9B72F9; #EA4335; #FBBC05; #34A853; #4285F4" dur="4s" repeatCount="indefinite"></animate>
-                                </stop>
-                                <stop offset="100%" stop-color="#9B72F9">
-                                    <animate attributeName="stop-color" values="#9B72F9; #EA4335; #FBBC05; #34A853; #4285F4; #9B72F9" dur="4s" repeatCount="indefinite"></animate>
-                                </stop>
-                                </linearGradient>
-                            </defs>
-                            <path fill="url(#geminiGradient)" d="M12 2L13.5 10.5L22 12L13.5 13.5L12 22L10.5 13.5L2 12L10.5 10.5L12 2Z"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="6s" repeatCount="indefinite"/></path>
-                        </svg>
-                    </div>
                     <div class="bot-message-content">
                         {% if message.text %}
                             <p>{{ message.text | safe }}</p>
@@ -154,24 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderBotMessage = (message) => {
-        const iconHtml = `
-            <div class="bot-icon-wrapper">
-                <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="geminiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#4285F4">
-                            <animate attributeName="stop-color" values="#4285F4; #9B72F9; #EA4335; #FBBC05; #34A853; #4285F4" dur="4s" repeatCount="indefinite"></animate>
-                        </stop>
-                        <stop offset="100%" stop-color="#9B72F9">
-                            <animate attributeName="stop-color" values="#9B72F9; #EA4335; #FBBC05; #34A853; #4285F4; #9B72F9" dur="4s" repeatCount="indefinite"></animate>
-                        </stop>
-                        </linearGradient>
-                    </defs>
-                    <path fill="url(#geminiGradient)" d="M12 2L13.5 10.5L22 12L13.5 13.5L12 22L10.5 13.5L2 12L10.5 10.5L12 2Z"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="6s" repeatCount="indefinite"/></path>
-                </svg>
-            </div>
-        `;
-
         let contentHtml = '<div class="bot-message-content">';
         if (message.text) {
             contentHtml += `<p>${message.text}</p>`;
@@ -221,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
             contentHtml += `<p class="followup-question">${message.followup_question}</p>`;
         }
         contentHtml += '</div>';
-        return iconHtml + contentHtml;
+        return contentHtml;
     };
 
     const addMessageToUI = (content, isUser) => {
