@@ -1,94 +1,121 @@
-# Vibe Commerce - A Vertex AI Search for Commerce Demo
+# Vibe Commerce - Vertex AI Search for Commerce Demo
 
-Vibe Commerce is a fictional e-commerce site built to demonstrate the powerful capabilities of **[Google Cloud's Vertex AI Search for Commerce](https://cloud.google.com/solutions/vertex-ai-search-commerce)**. It's designed to illustrate how the AI capabilities of Vertex AI Search for Commerce enable key differentiators like industry-leading site search, personalized recommendations, and conversational commerce.
+Vibe Commerce is a sample e-commerce web application built with Flask and Python. It serves as a comprehensive demonstration of Google Cloud's [Vertex AI Search for Commerce](https://cloud.google.com/vertex-ai-search-for-retail) capabilities, showcasing how to integrate AI-powered search, recommendations, and conversational features into a modern retail experience.
 
-This entire demo site was developed by a single ~~developer~~ Architect with the assistance of **[Gemini Code Assist](https://codeassist.google/)**.
+## Features
 
-## Key Features
+This application demonstrates a wide range of features available in Vertex AI Search for Commerce:
 
-This demo highlights several core features of Vertex AI Search for Commerce:
+-   **Keyword Search**: Fast and relevant product search.
+-   **Faceted Search**: Filter search results by attributes like brand, color, price, and rating.
+-   **Query Expansion**: Automatically broadens search queries to improve recall.
+-   **Autocomplete**: Provides search query suggestions as the user types.
+-   **Recommendations**: Displays "Others You May Like" recommendations on the homepage.
+-   **Conversational Commerce**: An AI Assistant that can:
+    -   Understand natural language queries.
+    -   Provide LLM-generated answers to product questions.
+    -   Handle comparisons, product details, and intent refinement.
+    -   Integrate with a separate Discovery Engine datastore for support-related queries.
+    -   Offer follow-up questions to guide the user.
+-   **User Authentication**: Secure login and session management using Google OAuth 2.0.
+-   **Shopping Cart**: Full add-to-cart, view cart, and checkout functionality.
+-   **Server-Side Event Tracking**: Robust and reliable tracking of user events (page views, search, add-to-cart, purchase) sent directly to the Retail API.
 
-*   **Site Search:** Experience fast, relevant, and intuitive search results that understand user intent, not just keywords. Includes rich features like faceting and query expansion.
-*   **Product Recommendations:** Discover products tailored to your browsing history and preferences with "Recommended For You" carousels on the homepage.
-*   **Conversational Commerce:** Engage with our AI-powered chat assistant, built on the Conversational Search API. This feature understands natural language queries, maintains conversational context, and provides helpful, AI-generated responses. It then uses the context of the conversation to fetch relevant product results, guiding users through their shopping journey.
+## Prerequisites
 
-## Technology Stack
+Before you begin, ensure you have the following:
 
-This project is built on a modern, scalable stack of Google Cloud services.
+-   A Google Cloud Project with billing enabled.
+-   The `gcloud` command-line tool installed and configured.
+-   Python 3.8 or higher.
+-   The following Google Cloud APIs enabled in your project:
+    -   Retail API (`retail.googleapis.com`)
+    -   Discovery Engine API (`discoveryengine.googleapis.com`)
+-   A **Vertex AI Search for Commerce catalog** with product data ingested.
+-   A **Discovery Engine datastore** (optional, for the support feature) with your support documents (e.g., FAQs) indexed.
+-   An **OAuth 2.0 Client ID and Secret**. You can create this in the "APIs & Services" > "Credentials" section of the Google Cloud Console. Ensure you add an authorized redirect URI pointing to `/callback` on your deployed application (e.g., `https://<your-app-url>/callback` for Cloud Run and `http://127.0.0.1:5000/callback` for local testing).
 
-| Service | Description |
-| :--- | :--- |
-| <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/vertex-ai-search.svg" width="24"> **[Vertex AI Search for Commerce](https://cloud.google.com/solutions/vertex-ai-search-commerce)** | The core engine for search, recommendations, and conversational AI. |
-| <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/bigquery.svg" width="24"> **[BigQuery](https://cloud.google.com/bigquery)** | Used for ingesting and storing the product catalog and user event data. |
-| <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-storage.svg" width="24"> **[Google Cloud Storage](https://cloud.google.com/storage)** | Used for storing static assets like product images and icons. |
-| <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-run.svg" width="24"> **[Cloud Run](https://cloud.google.com/run)** | Provides the serverless, containerized environment for hosting the Flask web application. |
-| <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/colab-enterprise.svg" width="24"> **[Vertex AI Colab Enterprise](https://cloud.google.com/colab/docs/introduction)** | Used for data preparation and interacting with Google Cloud APIs in a notebook environment. The product catalog and product images were generated in Colab Enterprise using the Gemini and Imagen models. |
-| <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/gemini.svg" width="24"> **[Gemini Model](https://deepmind.google/models/gemini/)** | Powers the generative AI capabilities, including the AI chat assistant. Primary model for generating the product catalog. |
-| <img src="https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/imagen.svg" width="24"> **[Imagen Model](https://deepmind.google/models/imagen/)** | Google's text-to-image model, used for generating product images. |
+## Local Development
 
-## System Architecture
+### 1. Clone the Repository
 
-This diagram illustrates how the different Google Cloud services work together to power the Vibe Commerce application.
+```bash
+git clone <repository-url>
+cd vibe-commerce
+```
 
-![Vibe Commerce Architecture](https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/vibe-commerce-arch.png)
+### 2. Set Up Python Environment
 
-## Getting Started
+It's recommended to use a virtual environment.
 
-Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-### Prerequisites
+### 3. Configure Environment Variables
 
-*   Python 3.8+
-*   `pip` and `venv`
-*   Google Cloud SDK installed and initialized.
+Create a `.env` file by copying the sample file.
 
-### Installation
+```bash
+cp sample.env .env
+```
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/cloud-jake/vibe-commerce.git
-    cd vibe-commerce
-    ```
+Now, edit the `.env` file and fill in the values for your specific Google Cloud project and configuration. See the Environment Variables section below for a detailed description of each variable.
 
-2.  **Create and activate a virtual environment:**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    # On Windows, use: venv\Scripts\activate
-    ```
+### 4. Run the Application
 
-3.  **Install the required packages:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+You can run the application locally using the Flask development server.
 
-4.  **Configure your environment:**
-    Create a `.env` file in the root of the project and add the necessary environment variables for your Google Cloud project, including `PROJECT_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a `SECRET_KEY`.
-
-    You can also add the following optional variables to customize the site's branding:
-    - `SITE_NAME`: An alternate name for the site (default: "Vibe Commerce").
-    - `SITE_LOGO_URL`: A URL for an alternate logo image (default: `/static/logo.png`).
-
-5.  **Authenticate with Google Cloud:**
-    Log in with your user credentials for application-default authentication.
-    ```bash
-    gcloud auth application-default login
-    ```
-
-### Running the Application
-
-Once the installation and configuration are complete, you can run the Flask development server:
 ```bash
 flask run
 ```
+
 The application will be available at `http://127.0.0.1:5000`.
 
-## Inspiration
+## Deployment to Cloud Run
 
-The design and spirit of this demo site are affectionately modeled after [Toys "R" Us](https://en.wikipedia.org/wiki/Toys_%22R%22_Us), a beloved childhood toy store that was a cultural icon in the 1980s. This project aims to recapture a small piece of that nostalgic experience within a modern, AI-powered e-commerce framework.
+The included `deploy.sh` script simplifies deployment to Google Cloud Run.
 
-## Author
+### 1. Authenticate with gcloud
 
-This project was created by **Jake Holmquist**, Field CTO, Google Cloud at Valtech.
+Ensure you are authenticated and have set your project.
 
-The complete source code for this project is available on GitHub: [https://github.com/cloud-jake/vibe-commerce](https://github.com/cloud-jake/vibe-commerce).
+```bash
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+```
+
+### 2. Run the Deployment Script
+
+The script will read the variables from your `.env` file, build a container image from the source, and deploy it as a new Cloud Run service named `vibe-commerce`.
+
+```bash
+./deploy.sh
+```
+
+The script will output the URL of the deployed service upon completion.
+
+## Environment Variables
+
+The following environment variables are required to configure the application. These should be placed in a `.env` file in the project root.
+
+| Variable                          | Required | Description                                                                                             |
+| --------------------------------- | :------: | ------------------------------------------------------------------------------------------------------- |
+| `PROJECT_ID`                      |   Yes    | Your Google Cloud project ID.                                                                           |
+| `REGION`                          |   Yes    | The Google Cloud region where the Cloud Run service will be deployed (e.g., `us-central1`).             |
+| `LOCATION`                        |   Yes    | The location of your Vertex AI Search catalog (e.g., `global` or `us`).                                 |
+| `CATALOG_ID`                      |   Yes    | The ID of your product catalog in Vertex AI Search.                                                     |
+| `SERVING_CONFIG_ID`               |   Yes    | The ID of the serving configuration used for standard product search.                                   |
+| `RECOMMENDATION_SERVING_CONFIG_ID`|   Yes    | The ID of the serving configuration used for homepage recommendations.                                  |
+| `GOOGLE_CLIENT_ID`                |   Yes    | The Client ID for your Google OAuth 2.0 application.                                                    |
+| `GOOGLE_CLIENT_SECRET`            |   Yes    | The Client Secret for your Google OAuth 2.0 application.                                                |
+| `SECRET_KEY`                      |   Yes    | A long, random string used to securely sign the session cookie.                                         |
+| `SUPPORT_ENGINE_ID`               |   Yes    | The ID of the Discovery Engine datastore used for support queries.                                      |
+| `SITE_NAME`                       |    No    | The name of the website, displayed in the UI. Defaults to "Vibe Commerce".                              |
+| `SITE_LOGO_URL`                   |    No    | The path to the site logo image. Defaults to `/static/logo.png`.                                        |
+| `SUPPORT_PROJECT_ID`              |    No    | The project ID for the support datastore. Defaults to the main `PROJECT_ID`.                            |
+| `SUPPORT_LOCATION`                |    No    | The location of the support datastore. Defaults to `global`.                                            |
+| `SUPPORT_COLLECTION_ID`           |    No    | The collection ID for the support datastore. Defaults to `default_collection`.                          |
+| `SUPPORT_SERVING_CONFIG_ID`       |    No    | The serving config ID for the support datastore. Defaults to `default_search`.                          |
