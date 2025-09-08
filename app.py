@@ -5,6 +5,7 @@ import traceback
 import uuid
 from authlib.integrations.flask_client import OAuth
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from google.cloud import discoveryengine_v1alpha as discoveryengine
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.retail_v2alpha import ConversationalSearchServiceClient
 from google.cloud.retail_v2alpha.types import ConversationalSearchRequest, ConversationalSearchResponse
@@ -91,6 +92,15 @@ user_event_client = UserEventServiceClient()
 # Initialize the Conversational Search Service Client from v2alpha
 conversational_search_client = ConversationalSearchServiceClient()
 
+# Initialize the Discovery Engine Search Service Client for support
+support_search_client = discoveryengine.SearchServiceClient()
+
+# Placement for support search
+support_serving_config = (
+    f"projects/{config.SUPPORT_PROJECT_ID}/locations/{config.SUPPORT_LOCATION}/"
+    f"collections/{config.SUPPORT_COLLECTION_ID}/engines/{config.SUPPORT_ENGINE_ID}/"
+    f"servingConfigs/{config.SUPPORT_SERVING_CONFIG_ID}"
+)
 # Placement for conversational search, using 'default_search' as per the guide
 conversational_placement = (
     f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}/catalogs/"
@@ -917,11 +927,43 @@ def api_chat():
             custom_response_generated = True
         elif 'RETAIL_SUPPORT' in user_query_types:
             print("INFO: Handling 'RETAIL_SUPPORT' query type.")
+
+            support_summary = ""
+            try:
+                # If support search is configured, call it to get a summary.
+                if config.SUPPORT_ENGINE_ID:
+                    support_request = discoveryengine.SearchRequest(
+                        serving_config=support_serving_config,
+                        query=query,
+                        page_size=3,  # Limit results for summary
+                        content_search_spec=discoveryengine.SearchRequest.ContentSearchSpec(
+                            summary_spec=discoveryengine.SearchRequest.ContentSearchSpec.SummarySpec(
+                                summary_result_count=3,
+                                include_citations=True,
+                            )
+                        ),
+                        query_expansion_spec={"condition": "AUTO"},
+                        spell_correction_spec={"mode": "AUTO"},
+                    )
+                    # Log the request payload for debugging purposes
+                    print(f"DEBUG: Support search request payload: {json.dumps(discoveryengine.SearchRequest.to_dict(support_request), indent=2)}")
+                    support_response = support_search_client.search(support_request)
+                    if support_response.summary and support_response.summary.summary_text:
+                        support_summary = support_response.summary.summary_text
+            except Exception as e:
+                print(f"Error calling support search API: {e}")
+                # Don't fail the whole chat, just log the error.
+
+            # Build the response text
+            if support_summary:
+                response_text = f"{query_types_str} {support_summary}"
+            else:
+                response_text = f"{query_types_str} For questions about purchases, payment methods, returns, or shipping, our support page has the answers."
+
             bot_response = {
-                'text': f"{query_types_str} For questions about purchases, payment methods, returns, or shipping, our support page has the answers.",
+                'text': response_text,
                 'page_links': [{'text': "Visit Support", 'url': support_links['retail_support']}]
             }
-            # TODO: Add a call to a separate CMS/FAQ API here.
             custom_response_generated = True
 
         if custom_response_generated:

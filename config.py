@@ -24,6 +24,14 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
+# --- Support Search Configuration ---
+# These are for the separate Discovery Engine datastore for support content.
+SUPPORT_PROJECT_ID = os.environ.get("SUPPORT_PROJECT_ID", PROJECT_ID)
+SUPPORT_LOCATION = os.environ.get("SUPPORT_LOCATION", "global")
+SUPPORT_COLLECTION_ID = os.environ.get("SUPPORT_COLLECTION_ID", "default_collection")
+SUPPORT_ENGINE_ID = os.environ.get("SUPPORT_ENGINE_ID")
+SUPPORT_SERVING_CONFIG_ID = os.environ.get("SUPPORT_SERVING_CONFIG_ID", "default_search")
+
 # --- Site Branding Configuration (Optional) ---
 SITE_NAME = os.environ.get("SITE_NAME", "Vibe Commerce")
 SITE_LOGO_URL = os.environ.get("SITE_LOGO_URL", "/static/logo.png")
@@ -36,6 +44,7 @@ REQUIRED_CONFIG = {
     "CATALOG_ID": CATALOG_ID,
     "SERVING_CONFIG_ID": SERVING_CONFIG_ID,
     "RECOMMENDATION_SERVING_CONFIG_ID": RECOMMENDATION_SERVING_CONFIG_ID,
+    "SUPPORT_ENGINE_ID": SUPPORT_ENGINE_ID,
     "SECRET_KEY": SECRET_KEY,
     "GOOGLE_CLIENT_ID": GOOGLE_CLIENT_ID,
     "GOOGLE_CLIENT_SECRET": GOOGLE_CLIENT_SECRET,
