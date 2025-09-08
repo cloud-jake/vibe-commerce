@@ -54,25 +54,29 @@ for VAR_NAME in "${REQUIRED_VARS[@]}"; do
 done
 
 # Build and deploy to Cloud Run
+# To make the command more robust and avoid issues with line breaks,
+# we'll construct a single comma-separated string for all environment variables.
+ENV_VARS="PROJECT_ID=${PROJECT_ID},"
+ENV_VARS+="LOCATION=${LOCATION},"
+ENV_VARS+="CATALOG_ID=${CATALOG_ID},"
+ENV_VARS+="SERVING_CONFIG_ID=${SERVING_CONFIG_ID},"
+ENV_VARS+="RECOMMENDATION_SERVING_CONFIG_ID=${RECOMMENDATION_SERVING_CONFIG_ID},"
+ENV_VARS+="GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},"
+ENV_VARS+="GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},"
+ENV_VARS+="SECRET_KEY=${SECRET_KEY},"
+ENV_VARS+="SITE_NAME=${SITE_NAME},"
+ENV_VARS+="SITE_LOGO_URL=${SITE_LOGO_URL},"
+ENV_VARS+="SUPPORT_PROJECT_ID=${SUPPORT_PROJECT_ID},"
+ENV_VARS+="SUPPORT_LOCATION=${SUPPORT_LOCATION},"
+ENV_VARS+="SUPPORT_COLLECTION_ID=${SUPPORT_COLLECTION_ID},"
+ENV_VARS+="SUPPORT_ENGINE_ID=${SUPPORT_ENGINE_ID},"
+ENV_VARS+="SUPPORT_SERVING_CONFIG_ID=${SUPPORT_SERVING_CONFIG_ID}"
+
 gcloud run deploy vibe-commerce \
   --source . \
   --platform managed \
   --region "$REGION" \
   --allow-unauthenticated \
-  --set-env-vars="PROJECT_ID=${PROJECT_ID}" \
-  --set-env-vars="LOCATION=${LOCATION}" \
-  --set-env-vars="CATALOG_ID=${CATALOG_ID}" \
-  --set-env-vars="SERVING_CONFIG_ID=${SERVING_CONFIG_ID}" \
-  --set-env-vars="RECOMMENDATION_SERVING_CONFIG_ID=${RECOMMENDATION_SERVING_CONFIG_ID}" \
-  --set-env-vars="GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" \
-  --set-env-vars="GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" \
-  --set-env-vars="SECRET_KEY=${SECRET_KEY}" \
-  --set-env-vars="SITE_NAME=${SITE_NAME}" \
-  --set-env-vars="SITE_LOGO_URL=${SITE_LOGO_URL}"
-  --set-env-vars="SUPPORT_PROJECT_ID=${SUPPORT_PROJECT_ID}" \
-  --set-env-vars="SUPPORT_LOCATION=${SUPPORT_LOCATION}" \
-  --set-env-vars="SUPPORT_COLLECTION_ID=${SUPPORT_COLLECTION_ID}" \
-  --set-env-vars="SUPPORT_ENGINE_ID=${SUPPORT_ENGINE_ID}" \
-  --set-env-vars="SUPPORT_SERVING_CONFIG_ID=${SUPPORT_SERVING_CONFIG_ID}"
+  --set-env-vars="$ENV_VARS"
 
 echo "Deployment to Cloud Run initiated successfully."

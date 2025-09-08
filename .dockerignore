@@ -33,3 +33,41 @@ instance/
 .vscode/
 .DS_Store
 *.log
+
+
+
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build and distribution artifacts
+build/
+dist/
+*.egg-info/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Flask instance folder (often contains local DBs or configs)
+instance/
+
+# Python virtual environment
+venv/
+.python-version
+
+# IDE and OS files
+.idea/
+.DS_Store
+Thumbs.db
+.vscode/
+__*
+
+# Log files
+*.log
