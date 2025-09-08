@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% from '_macros.html' import render_product_card, render_facets, render_pagination %}
+
+{% block title %}Conversational Search - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="search-results-container">
+    <aside class="facet-sidebar">
+        {# Render facets only if we have product results to filter #}
+        {% if results %}
+            {{ render_facets(facets, selected_facets, request.path, request.args, attribution_token, query=query) }}
+        {% endif %}
+    </aside>
+
+    <div class="search-results-grid">
+        {# This is the main conversational part, which always shows #}
+        {% if response and (response.conversational_text_response or page_links) %}
+        <div class="agent-response-container mb-4">
+            <h2 class="h5 mb-0">
+                <button class="agent-section-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#agent-response-body" aria-expanded="true" aria-controls="agent-response-body">
+                    <span>AI Assistant Response</span>
+                    <svg class="facet-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+            </h2>
+            <div class="collapse show" id="agent-response-body">
+                <div class="chat-message bot-message">
+                    <div class="bot-icon-wrapper">
+                        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="geminiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#4285F4">
+                                    <animate attributeName="stop-color" values="#4285F4; #9B72F9; #EA4335; #FBBC05; #34A853; #4285F4" dur="4s" repeatCount="indefinite"></animate>
+                                </stop>
+                                <stop offset="100%" stop-color="#9B72F9">
+                                    <animate attributeName="stop-color" values="#9B72F9; #EA4335; #FBBC05; #34A853; #4285F4; #9B72F9" dur="4s" repeatCount="indefinite"></animate>
+                                </stop>
+                                </linearGradient>
+                            </defs>
+                            <path fill="url(#geminiGradient)" d="M12 2L13.5 10.5L22 12L13.5 13.5L12 22L10.5 13.5L2 12L10.5 10.5L12 2Z"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="6s" repeatCount="indefinite"/></path>
+                        </svg>
+                    </div>
+                    <div class="bot-message-content" style="background-color: var(--surface-color);">
+                        {% if response.conversational_text_response %}
+                            <p>{{ response.conversational_text_response | safe }}</p>
+                        {% endif %}
+
+                        {% if page_links %}
+                        <div class="page-links">
+                            {% for link in page_links %}
+                                <a href="{{ link.url }}" class="page-link-button" target="_blank" rel="noopener noreferrer">{{ link.text }}</a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {# Only show related searches if there's more than one refined query #}
+                        {% if response.refined_search|length > 1 %}
+                        <div class="refined-queries">
+                            <p>Related Searches:</p>
+                            {# Slice the list to show all but the first one, which is used for the main results #}
+                            {% for rs in response.refined_search[1:] %}
+                                <a href="{{ url_for('agent_search', query=rs.query, conversation_id=conversation_id) }}" class="refined-query-button" style="text-decoration: none;">
+                                    {{ rs.query }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {# For a follow-up question, show the question and a dedicated input form #}
+                        {% if response.followup_question.followup_question %}
+                        <p class="followup-question">{{ response.followup_question.followup_question }}</p>
+                        <div class="chat-input-area" style="padding: 10px 0 0 0; border-top: 1px solid #e0e0e0; background: transparent;">
+                            <form action="{{ url_for('agent_search') }}" method="get" class="chat-form" id="followup-form">
+                                <input type="hidden" name="conversation_id" value="{{ conversation_id }}">
+                                <textarea name="query" placeholder="Answer here..." required rows="1" style="resize: none; overflow-y: hidden;"></textarea>
+                                <button type="submit" title="Send"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg></button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# This is the product grid part #}
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% elif results %}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h1 class="h3">Products for "{{ response.refined_search[0].query if response.refined_search else query }}"</h1>
+                    <p class="text-muted">
+                        Showing {{ results|length }} of {{ "{:,}".format(total_results) }} results.
+                    </p>
+                </div>
+            </div>
+            <div class="product-grid">
+                {% for result in results %}
+                    {{ render_product_card(result, attribution_token) }}
+                {% endfor %}
+            </div>
+            <!-- Pagination -->
+            {{ render_pagination(current_page, total_pages, total_results, page_size, results|length, request.path, request.args, attribution_token) }}
+        {% elif not page_links and response %}
+            {# Only show "no products" if it wasn't a support query that generated page_links and we had a conversational response #}
+            <div class="text-center py-5">
+                <h4>No products found for your query.</h4>
+                <p>Try a different search to find what you're looking for.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    .agent-response-container {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+    .agent-section-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-color);
+        background-color: #f8f9fa;
+        border: none;
+        text-align: left;
+        border-radius: 8px;
+    }
+    .agent-section-toggle:not(.collapsed) {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .agent-section-toggle .facet-toggle-icon {
+        transition: transform 0.2s ease-in-out;
+        transform: rotate(180deg);
+        width: 16px;
+        height: 16px;
+    }
+    .agent-section-toggle.collapsed .facet-toggle-icon {
+        transform: rotate(0deg);
+    }
+    #agent-response-body {
+        padding: 1rem;
+    }
+    #agent-response-body .chat-message {
+        margin-bottom: 0 !important;
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mainSearchForm = document.getElementById('main-search-form');
+    const mainQueryInput = mainSearchForm.querySelector('input[name="query"]');
+    const conversationId = '{{ conversation_id }}';
+    const followupForm = document.getElementById('followup-form');
+
+    if (mainSearchForm && conversationId) {
+        // Change the form's action to point to the agent search endpoint
+        mainSearchForm.action = '{{ url_for("agent_search") }}';
+
+        // Add the conversation_id as a hidden input
+        let hiddenInput = mainSearchForm.querySelector('input[name="conversation_id"]');
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'conversation_id';
+            mainSearchForm.appendChild(hiddenInput);
+        }
+        hiddenInput.value = conversationId;
+
+        // Update the placeholder text to reflect the conversational context
+        {% if response and response.followup_question.followup_question %}
+            mainQueryInput.placeholder = 'Answer here...';
+        {% else %}
+            mainQueryInput.placeholder = 'Continue the conversation...';
+        {% endif %}
+    }
+
+    // Add auto-resize and submit-on-enter logic for the followup textarea
+    if (followupForm) {
+        const followupTextarea = followupForm.querySelector('textarea');
+
+        const adjustTextareaHeight = () => {
+            followupTextarea.style.height = 'auto';
+            const maxHeight = 150;
+            const newHeight = Math.min(followupTextarea.scrollHeight, maxHeight);
+            followupTextarea.style.height = `${newHeight}px`;
+            followupTextarea.style.overflowY = (followupTextarea.scrollHeight > maxHeight) ? 'auto' : 'hidden';
+        };
+
+        followupTextarea.addEventListener('input', adjustTextareaHeight);
+
+        followupTextarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                followupForm.requestSubmit();
+            }
+        });
+        adjustTextareaHeight(); // Initial adjustment
+    }
+});
+</script>
+{% endblock %}

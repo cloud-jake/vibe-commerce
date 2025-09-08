@@ -7,6 +7,9 @@
     <div class="hero">
         <h1>Welcome to {{ site_name|default('Vibe Commerce') }}</h1>
         <p>This is a DEMO e-commerce site built on Google Vertex AI Search for Comemrce.<br> See the <a href="{{ url_for('about') }}">About</a> page for more info.</p>
+        <div class="mt-4">
+            <a href="{{ url_for('homepage_agent') }}" class="btn btn-primary btn-lg">Try Search v2 (Agent)</a>
+        </div>
     </div>
 
     <h2>Recommended For You</h2>
