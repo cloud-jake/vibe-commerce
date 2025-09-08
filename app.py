@@ -947,6 +947,10 @@ def agent_search():
                 conversational_filtering_mode=ConversationalSearchRequest.ConversationalFilteringSpec.Mode.DISABLED
             )
         )
+
+        # Log the request payload for debugging
+        print(f"DEBUG: Conversational Search Request (agent-search): {json.dumps(ConversationalSearchRequest.to_dict(conv_search_request), indent=2)}")
+
         streaming_response = conversational_search_client.conversational_search(request=conv_search_request)
         response = ConversationalSearchResponse()
         for chunk in streaming_response:
@@ -964,6 +968,9 @@ def agent_search():
         del response.refined_search[:] # Clear the original repeated field
         response.refined_search.extend(unique_refined_search) # Add unique items back
 
+        # Log the full response payload for debugging
+        print(f"DEBUG: Conversational Search Response (agent-search): {json.dumps(ConversationalSearchResponse.to_dict(response), indent=2)}")
+
         new_conversation_id = response.conversation_id
         user_query_types = set(response.user_query_types)
         query_types_str = f"[{', '.join(user_query_types)}]"
@@ -972,17 +979,8 @@ def agent_search():
         # This is useful for debugging and understanding user intent.
         for query_type in user_query_types:
             print(f"INFO: Agent search handling '{query_type}' query type.")
-
-        # --- 2. Handle Response Based on Query Type ---
-
-        # Case A: Simple Product Search -> Redirect to standard search results
-        if 'SIMPLE_PRODUCT_SEARCH' in user_query_types:
-            refined_query = response.refined_search[0].query if response.refined_search else query
-            _track_conversational_search_event(query, new_conversation_id, None, attribution_token)
-            return redirect(url_for('search', query=refined_query))
-
-        # Case B: All other query types -> Render a rich conversational page
         
+        # --- 2. Handle Response ---
         # Determine the primary search query for the results grid.
         primary_search_query = response.refined_search[0].query if response.refined_search else ""
 
@@ -1035,14 +1033,18 @@ def agent_search():
         results_for_js = []
         
         # Only perform a product search if the query type is product-related.
-        product_seeking_types = {'INTENT_REFINEMENT', 'PRODUCT_DETAILS', 'PRODUCT_COMPARISON', 'BEST_PRODUCT'}
+        product_seeking_types = {'SIMPLE_PRODUCT_SEARCH', 'INTENT_REFINEMENT', 'PRODUCT_DETAILS', 'PRODUCT_COMPARISON', 'BEST_PRODUCT'}
         
         if not user_query_types.isdisjoint(product_seeking_types) and primary_search_query:
             try:
+                query_expansion_spec = SearchRequest.QueryExpansionSpec(
+                    condition=SearchRequest.QueryExpansionSpec.Condition.AUTO,
+                    pin_unexpanded_results=True
+                )
                 search_req = SearchRequest(
                     placement=search_placement, branch=branch_path, query=primary_search_query,
                     visitor_id=session.get('visitor_id'), page_size=page_size, offset=offset,
-                    facet_specs=facet_specs, filter=search_filter,
+                    facet_specs=facet_specs, filter=search_filter, query_expansion_spec=query_expansion_spec,
                 )
                 search_pager = search_client.search(request=search_req)
                 main_search_response = next(search_pager.pages, None)
@@ -1085,6 +1087,9 @@ def agent_search():
         if response.conversational_text_response and not response.conversational_text_response.startswith('['):
             response.conversational_text_response = f"{query_types_str} {response.conversational_text_response}"
 
+        # Determine if the agent response section should be collapsed by default.
+        collapse_agent_response = 'SIMPLE_PRODUCT_SEARCH' in user_query_types
+
         # --- 5. Track Event and Render ---
         _track_conversational_search_event(query, new_conversation_id, main_search_response, attribution_token)
 
@@ -1102,7 +1107,8 @@ def agent_search():
             total_pages=total_pages,
             total_results=main_search_response.total_size if main_search_response else 0,
             page_size=page_size,
-            attribution_token=main_search_response.attribution_token if main_search_response else None
+            attribution_token=main_search_response.attribution_token if main_search_response else None,
+            collapse_agent_response=collapse_agent_response
         )
 
     except (GoogleAPICallError, Exception) as e:
@@ -1162,12 +1168,18 @@ def api_chat():
             )
         )
 
+        # Log the request payload for debugging
+        print(f"DEBUG: Conversational Search Request (api/chat): {json.dumps(ConversationalSearchRequest.to_dict(conv_search_request), indent=2)}")
+
         streaming_response = conversational_search_client.conversational_search(request=conv_search_request)
 
         # Aggregate the streaming response
         response = ConversationalSearchResponse()
         for chunk in streaming_response:
             response._pb.MergeFrom(chunk._pb)
+
+        # Log the full response payload for debugging
+        print(f"DEBUG: Conversational Search Response (api/chat): {json.dumps(ConversationalSearchResponse.to_dict(response), indent=2)}")
 
         new_conversation_id = response.conversation_id
         user_query_types = set(response.user_query_types)
