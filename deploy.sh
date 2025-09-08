@@ -26,6 +26,12 @@ RECOMMENDATION_SERVING_CONFIG_ID=${RECOMMENDATION_SERVING_CONFIG_ID:-recently_vi
 SITE_NAME=${SITE_NAME:-"Vibe Commerce"}
 SITE_LOGO_URL=${SITE_LOGO_URL:-/static/logo.png}
 
+# Set defaults for support search variables, mirroring config.py
+SUPPORT_PROJECT_ID=${SUPPORT_PROJECT_ID:-$PROJECT_ID}
+SUPPORT_LOCATION=${SUPPORT_LOCATION:-global}
+SUPPORT_COLLECTION_ID=${SUPPORT_COLLECTION_ID:-default_collection}
+SUPPORT_SERVING_CONFIG_ID=${SUPPORT_SERVING_CONFIG_ID:-default_search}
+
 # Validate that all required variables are set
 REQUIRED_VARS=(
   "PROJECT_ID"
@@ -36,6 +42,7 @@ REQUIRED_VARS=(
   "GOOGLE_CLIENT_ID"
   "GOOGLE_CLIENT_SECRET"
   "SECRET_KEY"
+  "SUPPORT_ENGINE_ID"
 )
 
 for VAR_NAME in "${REQUIRED_VARS[@]}"; do
@@ -62,5 +69,10 @@ gcloud run deploy vibe-commerce \
   --set-env-vars="SECRET_KEY=${SECRET_KEY}" \
   --set-env-vars="SITE_NAME=${SITE_NAME}" \
   --set-env-vars="SITE_LOGO_URL=${SITE_LOGO_URL}"
+  --set-env-vars="SUPPORT_PROJECT_ID=${SUPPORT_PROJECT_ID}" \
+  --set-env-vars="SUPPORT_LOCATION=${SUPPORT_LOCATION}" \
+  --set-env-vars="SUPPORT_COLLECTION_ID=${SUPPORT_COLLECTION_ID}" \
+  --set-env-vars="SUPPORT_ENGINE_ID=${SUPPORT_ENGINE_ID}" \
+  --set-env-vars="SUPPORT_SERVING_CONFIG_ID=${SUPPORT_SERVING_CONFIG_ID}"
 
 echo "Deployment to Cloud Run initiated successfully."
