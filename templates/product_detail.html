@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_macros.html' import render_product_card %}
 
 {% block title %}
     {%- if product and product.title -%}
@@ -144,10 +145,58 @@
 
             </div>
         </div>
+
+        <!-- You Might Also Like Section -->
+        {% if similar_products %}
+        <div class="container-fluid my-5 pt-5 border-top">
+            <h2 class="text-center mb-4">You Might Also Like</h2>
+            <div id="similarProductsCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {# Batch the products into groups of 5 for each carousel slide #}
+                    {% for product_batch in similar_products|batch(5) %}
+                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                        <div class="row gx-3 justify-content-center">
+                            {% for product in product_batch %}
+                            <div class="col" style="max-width: 20%;">
+                                {# This macro is defined in _macros.html and renders a product card #}
+                                {{ render_product_card(product, similar_products_attribution_token) }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#similarProductsCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#similarProductsCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+        </div>
+        {% endif %}
     {% endif %}
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
+<style>
+    /* Style for the carousel controls to make them visible and accessible */
+    #similarProductsCarousel .carousel-control-prev,
+    #similarProductsCarousel .carousel-control-next {
+        width: 5%;
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 8px;
+        margin: auto 0;
+        height: 100px; /* Adjust height as needed */
+    }
+    #similarProductsCarousel .carousel-control-prev-icon,
+    #similarProductsCarousel .carousel-control-next-icon {
+        background-size: 60%;
+    }
+</style>
 <script>
     {% if product %}
     document.addEventListener('DOMContentLoaded', function() {

@@ -848,12 +848,59 @@ def product_detail(product_id):
         product_proto = product_client.get_product(name=product_name)
         # Convert the proto message to a dictionary for reliable JSON serialization
         product_dict = Product.to_dict(product_proto)
+
+        # --- Fetch Similar Items Recommendations ---
+        similar_products = []
+        similar_products_attribution_token = None
+        try:
+            # Placement for the similar-items model
+            similar_items_placement = (
+                f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}/"
+                f"catalogs/{config.CATALOG_ID}/servingConfigs/similar-items-1"
+            )
+
+            # Create a context user event for the predict call. This event is not
+            # logged but provides the necessary context (the current product)
+            # for the recommendations model.
+            context_user_event = UserEvent(
+                event_type="detail-page-view",
+                visitor_id=session.get('visitor_id'),
+                product_details=[{"product": {"id": product_id}}]
+            )
+
+            # Create the predict request
+            predict_request = PredictRequest(
+                placement=similar_items_placement,
+                user_event=context_user_event,
+                page_size=20, # Fetch 20 items for 4 pages of 5 in the carousel
+                params={"returnProduct": struct_pb2.Value(bool_value=True)}
+            )
+
+            # Get the prediction response
+            predict_response = prediction_client.predict(request=predict_request)
+            similar_products_attribution_token = predict_response.attribution_token
+
+            # Process recommendations for rendering
+            for result in predict_response.results:
+                result_dict = PredictResponse.PredictionResult.to_dict(result)
+                if 'product' in result_dict.get('metadata', {}):
+                    product_dict_rec = result_dict['metadata']['product']
+                    product_dict_rec.pop('@type', None)
+                    product_json_str = json.dumps(product_dict_rec)
+                    similar_products.append(Product.from_json(product_json_str))
+
+        except (GoogleAPICallError, Exception) as e:
+            print(f"Error fetching similar items recommendations: {e}\n{traceback.format_exc()}")
+            # Don't fail the page, just log the error. Recommendations will be empty.
+
         return render_template(
             'product_detail.html',
             product=product_proto,
             product_json=product_dict,
             event_type='detail-page-view',
-            attribution_token=attribution_token
+            attribution_token=attribution_token,
+            similar_products=similar_products,
+            similar_products_attribution_token=similar_products_attribution_token
         )
     except Exception as e:
         print(f"Error fetching product details: {e}\n{traceback.format_exc()}")
