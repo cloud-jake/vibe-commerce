@@ -29,7 +29,7 @@
                 <div class="chat-message bot-message">
                     <div class="bot-message-content" style="background-color: var(--surface-color);">
                         {% if response.conversational_text_response %}
-                            <p>{{ response.conversational_text_response | safe }}</p>
+                            <p id="agent-response-text">{{ response.conversational_text_response | safe }}</p>
                         {% endif %}
 
                         {% if page_links %}
@@ -205,6 +205,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         adjustTextareaHeight(); // Initial adjustment
+    }
+
+    // --- Typing effect for agent response ---
+    const responseTextElement = document.getElementById('agent-response-text');
+    if (responseTextElement && responseTextElement.textContent.trim().length > 0) {
+        // Using textContent to get the text and avoid issues with potential HTML inside.
+        const fullText = responseTextElement.textContent;
+        responseTextElement.textContent = ''; // Clear existing text
+        let i = 0;
+        // Adjust speed for a natural feel. 20ms is a good starting point.
+        const speed = 20;
+
+        const typeWriter = () => {
+            if (i < fullText.length) {
+                responseTextElement.textContent += fullText.charAt(i);
+                i++;
+                setTimeout(typeWriter, speed);
+            }
+        };
+        typeWriter(); // Start the effect
     }
 });
 </script>
