@@ -1169,6 +1169,11 @@ footer {
         box-shadow: none;
     }
 
+    /* Hide footer on mobile chat page to maximize screen space */
+    body.on-chat-page footer {
+        display: none;
+    }
+
     /* About Page */
     .about-container {
         padding: 1.5rem;
