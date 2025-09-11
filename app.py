@@ -125,7 +125,15 @@ def _process_facets(facets_from_api, selected_facets):
 
     for facet in facets_from_api:
         facet_key = facet.key
-        display_name = display_name_map.get(facet_key, facet_key.title())
+
+        # Prepare a key for generating the display name, stripping "attributes."
+        temp_display_key = facet_key
+        if temp_display_key.lower().startswith('attributes.'):
+            temp_display_key = temp_display_key.split('.', 1)[1]
+
+        # Use the original facet_key for the map lookup, but the cleaned-up
+        # key for the .title() fallback.
+        display_name = display_name_map.get(facet_key, temp_display_key.title())
 
         processed_values = []
         for facet_value in facet.values:
