@@ -94,6 +94,9 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // Add a specific class to the body for chat-page-only styling
+    document.body.classList.add('on-chat-page');
+
     const chatForm = document.getElementById('chat-form');
     const queryInput = document.getElementById('query-input');
     const chatHistory = document.getElementById('chat-history');
