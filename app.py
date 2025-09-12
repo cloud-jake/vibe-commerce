@@ -4,7 +4,7 @@ import math
 import traceback
 import uuid
 from authlib.integrations.flask_client import OAuth
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory
 from google.cloud import discoveryengine_v1alpha as discoveryengine
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.retail_v2alpha import ConversationalSearchServiceClient
@@ -205,6 +205,11 @@ def initialize_session():
         session['cart_total'] = 0.0
     if 'visitor_id' not in session:
         session['visitor_id'] = str(uuid.uuid4())
+
+@app.route('/robots.txt')
+def robots_txt():
+    """Serves the robots.txt file from the static directory."""
+    return send_from_directory(app.static_folder, 'robots.txt')
 
 
 @app.route('/login')

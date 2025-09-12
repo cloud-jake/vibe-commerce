@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /about
+Allow: /orders
+Allow: /promotions
+Allow: /stores
+Allow: /support
+Disallow: /
