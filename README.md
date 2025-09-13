@@ -62,29 +62,29 @@ graph TD
         %% --- Connections ---
         
         %% User Flow
-        User -- "HTTP Requests" --&gt; CloudRun
+        User--"HTTP Requests"-->CloudRun
 
         %% Application to AI Services
-        CloudRun -- "API Calls" --&gt; SearchAPI
-        CloudRun --&gt; RecsAPI
-        CloudRun --&gt; ConvoAPI
-        CloudRun --&gt; AutocompleteAPI
-        CloudRun -- "Tracks Events" --&gt; UserEventService
+        CloudRun--"API Calls"-->SearchAPI
+        CloudRun-->RecsAPI
+        CloudRun-->ConvoAPI
+        CloudRun-->AutocompleteAPI
+        CloudRun--"Tracks Events"-->UserEventService
         
         %% AI Model Integration
-        ConvoAPI -- "Uses for Text Generation" --&gt; Gemini
+        ConvoAPI--"Uses for Text Generation"-->Gemini
 
         %% Data Layer Connections
-        UserEventService -- "Writes Events" --&gt; BigQuery
-        SearchAPI -- "Reads Data From" --&gt; BigQuery
-        RecsAPI -- "Reads Data From" --&gt; BigQuery
-        ConvoAPI -- "Reads Data From" --&gt; BigQuery
-        SearchAPI -- "Reads Image URIs From" --&gt; GCS
-        CloudRun -- "Serves Images From" --&gt; GCS
+        UserEventService--"Writes Events"-->BigQuery
+        SearchAPI--"Reads Data From"-->BigQuery
+        RecsAPI--"Reads Data From"-->BigQuery
+        ConvoAPI--"Reads Data From"-->BigQuery
+        SearchAPI--"Reads Image URIs From"-->GCS
+        CloudRun--"Serves Images From"-->GCS
         
         %% Offline Prep Flow
-        Colab -- "Loads Catalog" --&gt; BigQuery
-        Colab -- "Uploads Images" --&gt; GCS
+        Colab--"Loads Catalog"-->BigQuery
+        Colab--"Uploads Images"-->GCS
     end
 
     %% Styling
