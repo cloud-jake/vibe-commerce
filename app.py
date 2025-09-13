@@ -4,7 +4,7 @@ import math
 import traceback
 import uuid
 from authlib.integrations.flask_client import OAuth
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory, make_response
 from google.cloud import discoveryengine_v1alpha as discoveryengine
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.retail_v2alpha import ConversationalSearchServiceClient
@@ -17,6 +17,7 @@ from google.cloud.retail_v2 import (
     CompletionServiceClient,
 )
 from google.cloud.retail_v2.types import (
+    ListProductsRequest,
     CompleteQueryRequest,
     PredictRequest,
     PredictResponse,
@@ -211,6 +212,69 @@ def robots_txt():
     """Serves the robots.txt file from the static directory."""
     return send_from_directory(app.static_folder, 'robots.txt')
 
+@app.route('/sitemap.xml')
+def sitemap():
+    """Dynamically generates a sitemap.xml for the site."""
+    try:
+        # Static pages
+        static_urls = [
+            url_for(rule.endpoint, _external=True) for rule in app.url_map.iter_rules()
+            if rule.endpoint in ['index', 'homepage_agent', 'about', 'orders', 'promotions', 'stores', 'support', 'categories_list', 'chat']
+            and not rule.arguments
+        ]
+
+        # Product pages
+        product_urls = []
+        parent = product_client.branch_path(
+            project=config.PROJECT_ID,
+            location=config.LOCATION,
+            catalog=config.CATALOG_ID,
+            branch="default_branch"
+        )
+        # Note: For very large catalogs, consider caching this or generating it offline.
+        list_request = ListProductsRequest(parent=parent, page_size=1000)
+        product_pager = product_client.list_products(request=list_request)
+        for product in product_pager:
+            product_urls.append(url_for('product_detail', product_id=product.id, _external=True))
+
+        # Category pages
+        category_urls = []
+        facet_spec = SearchRequest.FacetSpec(
+            facet_key=SearchRequest.FacetSpec.FacetKey(key="categories"),
+            limit=250
+        )
+        branch_path = SearchServiceClient.branch_path(
+            project=config.PROJECT_ID,
+            location=config.LOCATION,
+            catalog=config.CATALOG_ID,
+            branch="default_branch"
+        )
+        search_request = SearchRequest(
+            placement=search_placement,
+            branch=branch_path,
+            query="",
+            visitor_id="sitemap-generator",
+            page_size=0,
+            facet_specs=[facet_spec],
+        )
+        search_pager = search_client.search(search_request)
+        search_response = next(search_pager.pages)
+        if search_response.facets:
+            category_facet = search_response.facets[0]
+            for v in category_facet.values:
+                category_urls.append(url_for('browse_category', category_name=v.value, _external=True))
+
+        all_urls = static_urls + product_urls + category_urls
+        
+        sitemap_xml = render_template('sitemap.xml', urls=all_urls)
+        response = make_response(sitemap_xml)
+        response.headers["Content-Type"] = "application/xml"
+        
+        return response
+
+    except Exception as e:
+        print(f"Error generating sitemap: {e}\n{traceback.format_exc()}")
+        return "Error generating sitemap", 500
 
 @app.route('/login')
 def login():

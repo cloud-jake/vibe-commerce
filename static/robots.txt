@@ -1,7 +1,23 @@
 User-agent: *
-Allow: /about
-Allow: /orders
-Allow: /promotions
-Allow: /stores
-Allow: /support
-Disallow: /
+
+# Point crawlers to the sitemap
+Sitemap: /sitemap.xml
+
+# Allow crawling of static pages, product pages, and the homepage
+Allow: /
+
+# Disallow crawling of user-specific, API, and checkout-related paths
+Disallow: /api/
+Disallow: /cart
+Disallow: /add_to_cart
+Disallow: /remove_from_cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /logout
+Disallow: /callback
+Disallow: /agent-search
+Disallow: /search
+Disallow: /product
+Disallow: /category
+Disallow: /categories
+
