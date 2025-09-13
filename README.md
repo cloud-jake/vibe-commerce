@@ -21,6 +21,52 @@ This application demonstrates a wide range of features available in Vertex AI Se
 -   **Shopping Cart**: Full add-to-cart, view cart, and checkout functionality.
 -   **Server-Side Event Tracking**: Robust and reliable tracking of user events (page views, search, add-to-cart, purchase) sent directly to the Retail API.
 
+## Architecture
+
+```mermaid
+graph TD
+    subgraph "Vibe Commerce - System Architecture"
+        direction TB
+
+        subgraph "Online Serving"
+            User(["&lt;fa:fa-user&gt; User"])
+            CloudRun["&lt;fa:fa-cloud&gt;&lt;br&gt;&lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;&lt;i&gt;Flask Web App&lt;/i&gt;"]
+            
+            subgraph "Vertex AI Search for Commerce APIs"
+                RetailAPI["&lt;fa:fa-tags&gt;&lt;br&gt;&lt;b&gt;Retail API&lt;/b&gt;&lt;br&gt;&lt;i&gt;Search, Recs, Events&lt;/i&gt;"]
+                ConversationalAPI["&lt;fa:fa-comments&gt;&lt;br&gt;&lt;b&gt;Conversational API&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Chat Assistant&lt;/i&gt;"]
+                DiscoveryEngineAPI["&lt;fa:fa-book&gt;&lt;br&gt;&lt;b&gt;Discovery Engine API&lt;/b&gt;&lt;br&gt;&lt;i&gt;Support Document Search&lt;/i&gt;"]
+            end
+
+            User -- "Interacts with site" --> CloudRun
+            CloudRun -- "Search, Recs, Events" --> RetailAPI
+            CloudRun -- "AI Assistant (Products)" --> ConversationalAPI
+            ConversationalAPI -- "AI Assistant (Support)" --> DiscoveryEngineAPI
+        end
+
+        subgraph "Data & Storage"
+            BigQuery["&lt;fa:fa-database&gt;&lt;br&gt;&lt;b&gt;BigQuery&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Catalog & User Events&lt;/i&gt;"]
+            GCS["&lt;fa:fa-archive&gt;&lt;br&gt;&lt;b&gt;Cloud Storage&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Images & Support Docs&lt;/i&gt;"]
+        end
+
+        subgraph "Offline Data Preparation"
+            Colab["&lt;fa:fa-cogs&gt;&lt;br&gt;&lt;b&gt;Colab Enterprise&lt;/b&gt;&lt;br&gt;&lt;i&gt;Data Prep Notebooks&lt;/i&gt;"]
+            Gemini["&lt;fa:fa-lightbulb&gt;&lt;br&gt;&lt;b&gt;Gemini Model&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Data Generation&lt;/i&gt;"]
+            Imagen["&lt;fa:fa-image&gt;&lt;br&gt;&lt;b&gt;Imagen Model&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Image Generation&lt;/i&gt;"]
+        end
+
+        %% Connections between subgraphs
+        RetailAPI -- "Reads from" --> BigQuery
+        ConversationalAPI -- "Converses over" --> BigQuery
+        DiscoveryEngineAPI -- "Searches" --> GCS
+        CloudRun -- "Serves images from" --> GCS
+        Colab -- "Loads product catalog to" --> BigQuery
+        Colab -- "Generates data with" --> Gemini
+        Colab -- "Generates images with" --> Imagen
+        Colab -- "Stores generated images in" --> GCS
+    end
+```
+
 ## Prerequisites
 
 Before you begin, ensure you have the following:
