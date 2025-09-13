@@ -35,15 +35,12 @@ graph TD
         %% --- AI Services Layer ---
         subgraph "Vertex AI Services"
             direction TB
-            subgraph "Vertex AI Search for Commerce"
+            subgraph "Vertex AI Search for Commerce APIs"
                 direction LR
-                SearchAPI["&lt;b&gt;Product Search&lt;/b&gt;&lt;br&gt;&lt;small&gt;SearchServiceClient&lt;/small&gt;"]
+                SearchAPI["&lt;b&gt;Search&lt;/b&gt;&lt;br&gt;&lt;small&gt;SearchServiceClient&lt;/small&gt;"]
                 RecsAPI["&lt;b&gt;Recommendations&lt;/b&gt;&lt;br&gt;&lt;small&gt;PredictionServiceClient&lt;/small&gt;"]
                 ConvoAPI["&lt;b&gt;Conversational AI&lt;/b&gt;&lt;br&gt;&lt;small&gt;ConversationalSearchServiceClient&lt;/small&gt;"]
                 AutocompleteAPI["&lt;b&gt;Autocomplete&lt;/b&gt;&lt;br&gt;&lt;small&gt;CompletionServiceClient&lt;/small&gt;"]
-            end
-            subgraph "Vertex AI Search for Content"
-                ContentSearchAPI["&lt;b&gt;Content Search&lt;/b&gt;&lt;br&gt;&lt;small&gt;SearchServiceClient (Discovery)&lt;/small&gt;"]
             end
             UserEventService["&lt;b&gt;User Event Ingestion&lt;/b&gt;&lt;br&gt;&lt;small&gt;UserEventServiceClient&lt;/small&gt;"]
             Gemini["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/gemini.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Gemini Model&lt;/b&gt;&lt;br&gt;&lt;i&gt;Powers Conversational AI&lt;/i&gt;"]
@@ -56,7 +53,6 @@ graph TD
                 direction LR
                 BigQuery["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/bigquery.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;BigQuery&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Catalog&lt;br&gt;& User Events&lt;/i&gt;"]
                 GCS["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-storage.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Cloud Storage&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Images&lt;/i&gt;"]
-                WebsiteDataSource["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/website-datastore.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Website&lt;/b&gt;&lt;br&gt;&lt;i&gt;Support Content&lt;/i&gt;"]
             end
             subgraph "Offline Data Generation"
                 Colab["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/colab-enterprise.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Colab Enterprise&lt;/b&gt;&lt;br&gt;&lt;i&gt;(using Gemini & Imagen)&lt;/i&gt;"]
@@ -66,31 +62,43 @@ graph TD
         %% --- Connections ---
         
         %% User Flow
-        User--"HTTP Requests"-->CloudRun
+        User -- "HTTP Requests" --&gt; CloudRun
 
         %% Application to AI Services
-        CloudRun--"API Calls"-->SearchAPI
-        CloudRun-->RecsAPI
-        CloudRun-->ConvoAPI
-        CloudRun-->AutocompleteAPI
-        CloudRun--"Support Queries"-->ContentSearchAPI
-        CloudRun--"Tracks Events"-->UserEventService
+        CloudRun -- "API Calls" --&gt; SearchAPI
+        CloudRun --&gt; RecsAPI
+        CloudRun --&gt; ConvoAPI
+        CloudRun --&gt; AutocompleteAPI
+        CloudRun -- "Tracks Events" --&gt; UserEventService
         
         %% AI Model Integration
-        ConvoAPI--"Uses for Text Generation"-->Gemini
+        ConvoAPI -- "Uses for Text Generation" --&gt; Gemini
 
         %% Data Layer Connections
-        UserEventService--"Writes Events"-->BigQuery
-        SearchAPI--"Reads Data From"-->BigQuery
-        RecsAPI--"Reads Data From"-->BigQuery
-        ConvoAPI--"Reads Data From"-->BigQuery
-        ContentSearchAPI--"Reads Content From"-->WebsiteDataSource
-        CloudRun--"Serves Images From"-->GCS
+        UserEventService -- "Writes Events" --&gt; BigQuery
+        SearchAPI -- "Reads Data From" --&gt; BigQuery
+        RecsAPI -- "Reads Data From" --&gt; BigQuery
+        ConvoAPI -- "Reads Data From" --&gt; BigQuery
+        SearchAPI -- "Reads Image URIs From" --&gt; GCS
+        CloudRun -- "Serves Images From" --&gt; GCS
         
         %% Offline Prep Flow
-        Colab--"Loads Catalog"-->BigQuery
-        Colab--"Uploads Images"-->GCS
+        Colab -- "Loads Catalog" --&gt; BigQuery
+        Colab -- "Uploads Images" --&gt; GCS
     end
+
+    %% Styling
+    classDef serviceNode fill:#e8f5e9,stroke:#333,stroke-width:1px,padding:10px,border-radius:5px
+    classDef dataNode fill:#fff3e0,stroke:#333,stroke-width:1px,padding:10px,border-radius:5px
+    classDef appNode fill:#fce4ec,stroke:#333,stroke-width:1px,padding:10px,border-radius:5px
+    classDef prepNode fill:#f3e5f5,stroke:#333,stroke-width:1px,padding:10px,border-radius:5px
+    classDef userNode fill:#e3f2fd,stroke:#333,stroke-width:2px,border-radius:50%
+
+    class User userNode;
+    class CloudRun appNode;
+    class SearchAPI,RecsAPI,ConvoAPI,AutocompleteAPI,UserEventService,Gemini serviceNode;
+    class BigQuery,GCS dataNode;
+    class Colab prepNode;
 ```
 
 ## Prerequisites
