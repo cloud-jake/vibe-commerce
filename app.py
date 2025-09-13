@@ -1,6 +1,7 @@
 import os
 import json
 import math
+from markdown_it import MarkdownIt
 import traceback
 import uuid
 from authlib.integrations.flask_client import OAuth
@@ -93,8 +94,11 @@ user_event_client = UserEventServiceClient()
 # Initialize the Conversational Search Service Client from v2alpha
 conversational_search_client = ConversationalSearchServiceClient()
 
-# Initialize the Discovery Engine Search Service Client for support
-support_search_client = discoveryengine.SearchServiceClient()
+# Initialize the Discovery Engine Conversational Search Service Client for support answers
+support_answer_client = discoveryengine.ConversationalSearchServiceClient()
+
+# Initialize a markdown parser for formatting generated answers
+markdown_parser = MarkdownIt()
 
 # Placement for support search
 support_serving_config = (
@@ -1097,13 +1101,12 @@ def agent_search():
 
         new_conversation_id = response.conversation_id
         user_query_types = set(response.user_query_types)
-        query_types_str = f"[{', '.join(user_query_types)}]"
 
         # Log the query types returned by the conversational search API.
         # This is useful for debugging and understanding user intent.
         for query_type in user_query_types:
             print(f"INFO: Agent search handling '{query_type}' query type.")
-        
+
         # --- 2. Handle Response ---
         # Determine the primary search query for the results grid.
         primary_search_query = response.refined_search[0].query if response.refined_search else ""
@@ -1181,35 +1184,71 @@ def agent_search():
                 print(f"Error fetching main product grid for agent search: {e}")
         
         # --- 4. Handle non-LLM/Support queries (generate custom text and links) ---
+        generated_answer = ""
         page_links = []
-        if not response.conversational_text_response:
-            support_links = {
-                'order_support': url_for('orders'), 'deals_and_coupons': url_for('promotions'),
-                'store_relevant': url_for('stores'), 'retail_support': url_for('support')
-            }
-            if 'RETAIL_IRRELEVANT' in user_query_types:
-                response.conversational_text_response = f"{query_types_str} I am a shopping assistant. How can I help you find what you're looking for today?"
-            elif 'BLOCKLISTED' in user_query_types:
-                response.conversational_text_response = f"{query_types_str} I'm sorry, I cannot fulfill this request."
-            elif 'QUERY_TYPE_UNSPECIFIED' in user_query_types:
-                response.conversational_text_response = f"{query_types_str} I'm not sure I understand. Could you please rephrase your question?"
-            elif 'ORDER_SUPPORT' in user_query_types:
-                response.conversational_text_response = f"{query_types_str} It looks like you have a question about an order. You can track your order or view your order history on our Orders page."
-                page_links.append({'text': "Go to My Orders", 'url': support_links['order_support']})
-            elif 'DEALS_AND_COUPONS' in user_query_types:
-                response.conversational_text_response = f"{query_types_str} Looking for a good deal? All of our current promotions, discounts, and coupons are available on our deals page."
-                page_links.append({'text': "View Promotions", 'url': support_links['deals_and_coupons']})
-            elif 'STORE_RELEVANT' in user_query_types:
-                response.conversational_text_response = f"{query_types_str} For questions about store locations, hours, or to check product availability, our store finder can help."
-                page_links.append({'text': "Find a Store", 'url': support_links['store_relevant']})
-            elif 'RETAIL_SUPPORT' in user_query_types:
-                response.conversational_text_response = f"{query_types_str} For questions about purchases, payment methods, returns, or shipping, our support page has the answers."
-                page_links.append({'text': "Visit Support", 'url': support_links['retail_support']})
-            elif 'SIMPLE_PRODUCT_SEARCH' not in user_query_types:
-                 response.conversational_text_response = "Here's what I found."
+        support_links = {
+            'order_support': url_for('orders'), 'deals_and_coupons': url_for('promotions'),
+            'store_relevant': url_for('stores'), 'retail_support': url_for('support')
+        }
+        support_query_types = {'ORDER_SUPPORT', 'DEALS_AND_COUPONS', 'STORE_RELEVANT', 'RETAIL_SUPPORT'}
 
-        if response.conversational_text_response and not response.conversational_text_response.startswith('['):
-            response.conversational_text_response = f"{query_types_str} {response.conversational_text_response}"
+        if 'RETAIL_IRRELEVANT' in user_query_types:
+            response.conversational_text_response = "I am a shopping assistant. How can I help you find what you're looking for today?"
+        elif 'BLOCKLISTED' in user_query_types:
+            response.conversational_text_response = "I'm sorry, I cannot fulfill this request."
+        elif 'QUERY_TYPE_UNSPECIFIED' in user_query_types:
+            response.conversational_text_response = "I'm not sure I understand. Could you please rephrase your question?"
+        elif not user_query_types.isdisjoint(support_query_types):
+            matched_type = next(iter(user_query_types.intersection(support_query_types)))
+            print(f"INFO: Handling '{matched_type}' query type with generated answer flow in agent search.")
+            try:
+                if config.SUPPORT_ENGINE_ID:
+                    # Use the streamlined `answer_query` method for generated answers.
+                    answer_generation_spec = discoveryengine.AnswerQueryRequest.AnswerGenerationSpec(
+                        model_spec=discoveryengine.AnswerQueryRequest.AnswerGenerationSpec.ModelSpec(model_version="stable"),
+                        include_citations=False,
+                        prompt_spec=discoveryengine.AnswerQueryRequest.AnswerGenerationSpec.PromptSpec(
+                            preamble="Please format answers in markdown"
+                        )
+                    )
+                    search_spec = discoveryengine.AnswerQueryRequest.SearchSpec(
+                        search_params=discoveryengine.AnswerQueryRequest.SearchSpec.SearchParams(
+                            max_return_results=0
+                        )
+                    )
+                    answer_query_req = discoveryengine.AnswerQueryRequest(
+                        serving_config=support_serving_config,
+                        query=discoveryengine.Query(text=query),
+                        answer_generation_spec=answer_generation_spec,
+                        user_pseudo_id=session.get('visitor_id'),
+                        search_spec=search_spec
+                    )
+                    print(f"DEBUG: Support answer_query request payload (agent-search): {json.dumps(discoveryengine.AnswerQueryRequest.to_dict(answer_query_req), indent=2)}")
+                    answer_query_resp = support_answer_client.answer_query(request=answer_query_req)
+
+                    if answer_query_resp.answer and answer_query_resp.answer.state.name == 'SUCCEEDED':
+                        print(f"DEBUG: Support answer_query response JSON (agent-search): {json.dumps(discoveryengine.Answer.to_dict(answer_query_resp.answer), indent=2)}")
+                        generated_answer = markdown_parser.render(answer_query_resp.answer.answer_text)
+
+            except Exception as e:
+                print(f"Error calling support search/answer API in agent search: {e}")
+
+            default_texts = {
+                'ORDER_SUPPORT': "It looks like you have a question about an order. You can track your order or view your order history on our Orders page.",
+                'DEALS_AND_COUPONS': "Looking for a good deal? All of our current promotions, discounts, and coupons are available on our deals page.",
+                'STORE_RELEVANT': "For questions about store locations, hours, or to check product availability, our store finder can help.",
+                'RETAIL_SUPPORT': "For questions about purchases, payment methods, returns, or shipping, our support page has the answers."
+            }
+            page_link_info = {
+                'ORDER_SUPPORT': {'text': "Go to My Orders", 'url': support_links['order_support']},
+                'DEALS_AND_COUPONS': {'text': "View Promotions", 'url': support_links['deals_and_coupons']},
+                'STORE_RELEVANT': {'text': "Find a Store", 'url': support_links['store_relevant']},
+                'RETAIL_SUPPORT': {'text': "Visit Support", 'url': support_links['retail_support']}
+            }
+            response.conversational_text_response = default_texts[matched_type]
+            page_links.append(page_link_info[matched_type])
+        elif not response.conversational_text_response and 'SIMPLE_PRODUCT_SEARCH' not in user_query_types:
+            response.conversational_text_response = "Here's what I found."
 
         # Determine if the agent response section should be collapsed by default.
         collapse_agent_response = 'SIMPLE_PRODUCT_SEARCH' in user_query_types
@@ -1222,6 +1261,7 @@ def agent_search():
             query=query,
             conversation_id=new_conversation_id,
             response=response,
+            generated_answer=generated_answer,
             page_links=page_links,
             results=search_results,
             facets=processed_facets,
@@ -1308,9 +1348,6 @@ def api_chat():
         new_conversation_id = response.conversation_id
         user_query_types = set(response.user_query_types)
 
-        # Create a string representation of the query types for debugging.
-        query_types_str = f"[{', '.join(user_query_types)}]"
-
         # De-duplicate refined queries while preserving order, as the streaming
         # API can sometimes send the same suggestions in multiple chunks.
         unique_refined_queries = []
@@ -1341,85 +1378,81 @@ def api_chat():
         if 'RETAIL_IRRELEVANT' in user_query_types:
             print("INFO: Handling 'RETAIL_IRRELEVANT' query type.")
             bot_response = {
-                'text': f"{query_types_str} I am a shopping assistant. How can I help you find what you're looking for today?"
+                'text': "I am a shopping assistant. How can I help you find what you're looking for today?"
             }
             custom_response_generated = True
         elif 'BLOCKLISTED' in user_query_types:
             print("INFO: Handling 'BLOCKLISTED' query type.")
             bot_response = {
-                'text': f"{query_types_str} I'm sorry, I cannot fulfill this request."
+                'text': "I'm sorry, I cannot fulfill this request."
             }
             custom_response_generated = True
         elif 'QUERY_TYPE_UNSPECIFIED' in user_query_types:
             print("INFO: Handling 'QUERY_TYPE_UNSPECIFIED' query type.")
             bot_response = {
-                'text': f"{query_types_str} I'm not sure I understand. Could you please rephrase your question? I can help you find products and answer questions about them."
+                'text': "I'm not sure I understand. Could you please rephrase your question? I can help you find products and answer questions about them."
             }
             custom_response_generated = True
 
-        # Category 2: Support and information queries
-        elif 'ORDER_SUPPORT' in user_query_types:
-            print("INFO: Handling 'ORDER_SUPPORT' query type.")
-            bot_response = {
-                'text': f"{query_types_str} It looks like you have a question about an order. You can track your order or view your order history on our Orders page.",
-                'page_links': [{'text': "Go to My Orders", 'url': support_links['order_support']}]
-            }
-            # TODO: Add a call to a separate Order Management System API here.
-            custom_response_generated = True
-        elif 'DEALS_AND_COUPONS' in user_query_types:
-            print("INFO: Handling 'DEALS_AND_COUPONS' query type.")
-            bot_response = {
-                'text': f"{query_types_str} Looking for a good deal? All of our current promotions, discounts, and coupons are available on our deals page.",
-                'page_links': [{'text': "View Promotions", 'url': support_links['deals_and_coupons']}]
-            }
-            # TODO: Add a call to a separate Promotions API here.
-            custom_response_generated = True
-        elif 'STORE_RELEVANT' in user_query_types:
-            print("INFO: Handling 'STORE_RELEVANT' query type.")
-            bot_response = {
-                'text': f"{query_types_str} For questions about store locations, hours, or to check product availability, our store finder can help.",
-                'page_links': [{'text': "Find a Store", 'url': support_links['store_relevant']}]
-            }
-            # TODO: Add a call to a separate Store Locator API here.
-            custom_response_generated = True
-        elif 'RETAIL_SUPPORT' in user_query_types:
-            print("INFO: Handling 'RETAIL_SUPPORT' query type.")
+        # Category 2: Support and information queries with Generated Answers
+        support_query_types = {'ORDER_SUPPORT', 'DEALS_AND_COUPONS', 'STORE_RELEVANT', 'RETAIL_SUPPORT'}
+        if not user_query_types.isdisjoint(support_query_types):
+            # Get the specific support type that was matched
+            matched_type = next(iter(user_query_types.intersection(support_query_types)))
+            print(f"INFO: Handling '{matched_type}' query type with generated answer flow.")
 
-            support_summary = ""
+            generated_answer = ""
+            page_link_info = {
+                'ORDER_SUPPORT': {'text': "Go to My Orders", 'url': support_links['order_support']},
+                'DEALS_AND_COUPONS': {'text': "View Promotions", 'url': support_links['deals_and_coupons']},
+                'STORE_RELEVANT': {'text': "Find a Store", 'url': support_links['store_relevant']},
+                'RETAIL_SUPPORT': {'text': "Visit Support", 'url': support_links['retail_support']}
+            }
+
+            default_texts = {
+                'ORDER_SUPPORT': "It looks like you have a question about an order. You can track your order or view your order history on our Orders page.",
+                'DEALS_AND_COUPONS': "Looking for a good deal? All of our current promotions, discounts, and coupons are available on our deals page.",
+                'STORE_RELEVANT': "For questions about store locations, hours, or to check product availability, our store finder can help.",
+                'RETAIL_SUPPORT': "For questions about purchases, payment methods, returns, or shipping, our support page has the answers."
+            }
+
             try:
-                # If support search is configured, call it to get a summary.
+                # Use the new support engine config for generated answers
                 if config.SUPPORT_ENGINE_ID:
-                    support_request = discoveryengine.SearchRequest(
-                        serving_config=support_serving_config,
-                        query=query,
-                        page_size=3,  # Limit results for summary
-                        content_search_spec=discoveryengine.SearchRequest.ContentSearchSpec(
-                            summary_spec=discoveryengine.SearchRequest.ContentSearchSpec.SummarySpec(
-                                summary_result_count=3,
-                                include_citations=True,
-                            )
-                        ),
-                        query_expansion_spec={"condition": "AUTO"},
-                        spell_correction_spec={"mode": "AUTO"},
+                    # Use the streamlined `answer_query` method for generated answers.
+                    answer_generation_spec = discoveryengine.AnswerQueryRequest.AnswerGenerationSpec(
+                        model_spec=discoveryengine.AnswerQueryRequest.AnswerGenerationSpec.ModelSpec(model_version="stable"),
+                        include_citations=False,
+                        prompt_spec=discoveryengine.AnswerQueryRequest.AnswerGenerationSpec.PromptSpec(
+                            preamble="Please answer in markdown"
+                        )
                     )
-                    # Log the request payload for debugging purposes
-                    print(f"DEBUG: Support search request payload: {json.dumps(discoveryengine.SearchRequest.to_dict(support_request), indent=2)}")
-                    support_response = support_search_client.search(support_request)
-                    if support_response.summary and support_response.summary.summary_text:
-                        support_summary = support_response.summary.summary_text
-            except Exception as e:
-                print(f"Error calling support search API: {e}")
-                # Don't fail the whole chat, just log the error.
+                    search_spec = discoveryengine.AnswerQueryRequest.SearchSpec(
+                        search_params=discoveryengine.AnswerQueryRequest.SearchSpec.SearchParams(
+                            max_return_results=0
+                        )
+                    )
+                    answer_query_req = discoveryengine.AnswerQueryRequest(
+                        serving_config=support_serving_config,
+                        query=discoveryengine.Query(text=query),
+                        answer_generation_spec=answer_generation_spec,
+                        user_pseudo_id=session.get('visitor_id'),
+                        search_spec=search_spec
+                    )
+                    print(f"DEBUG: Support answer_query request payload (api/chat): {json.dumps(discoveryengine.AnswerQueryRequest.to_dict(answer_query_req), indent=2)}")
+                    answer_query_resp = support_answer_client.answer_query(request=answer_query_req)
 
-            # Build the response text
-            if support_summary:
-                response_text = f"{query_types_str} {support_summary}"
-            else:
-                response_text = f"{query_types_str} For questions about purchases, payment methods, returns, or shipping, our support page has the answers."
+                    if answer_query_resp.answer and answer_query_resp.answer.state.name == 'SUCCEEDED':
+                        print(f"DEBUG: Support answer_query response JSON (api/chat): {json.dumps(discoveryengine.Answer.to_dict(answer_query_resp.answer), indent=2)}")
+                        generated_answer = markdown_parser.render(answer_query_resp.answer.answer_text)
+
+            except Exception as e:
+                print(f"Error calling support search/answer API: {e}")
 
             bot_response = {
-                'text': response_text,
-                'page_links': [{'text': "Visit Support", 'url': support_links['retail_support']}]
+                'text': default_texts[matched_type],
+                'generated_answer': generated_answer,
+                'page_links': [page_link_info[matched_type]]
             }
             custom_response_generated = True
 
@@ -1443,12 +1476,9 @@ def api_chat():
             if not conversational_text and 'SIMPLE_PRODUCT_SEARCH' in user_query_types:
                 conversational_text = "Here is what I found for your search."
 
-            # Prepend the query type string for debugging, but only if there's text to show.
-            final_text = f"{query_types_str} {conversational_text}" if conversational_text else ""
-
             bot_response = {
                 'is_user': False,
-                'text': final_text,
+                'text': conversational_text,
                 'followup_question': response.followup_question.followup_question if response.followup_question else None,
                 'refined_queries': unique_refined_queries,
                 'products': [],
