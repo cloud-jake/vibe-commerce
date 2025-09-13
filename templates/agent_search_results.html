@@ -20,7 +20,10 @@
                 <button class="agent-section-toggle{% if collapse_agent_response %} collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#agent-response-body" aria-expanded="{{ 'false' if collapse_agent_response else 'true' }}" aria-controls="agent-response-body">
                     <div class="d-flex align-items-center">
                         <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="20" height="20" style="flex-shrink: 0;"><path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/><defs><radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"><stop offset=".067" stop-color="#9168C0"/><stop offset=".343" stop-color="#5684D1"/><stop offset=".672" stop-color="#1BA1E3"/></radialGradient></defs></svg>
-                        <span class="ms-2">AI Assistant Response</span>
+                        <span class="ms-2 me-2">AI Assistant Response</span>
+                        {% if response.user_query_types %}
+                            <span class="badge bg-secondary fw-normal">[{{ response.user_query_types|join(', ') }}]</span>
+                        {% endif %}
                     </div>
                     <svg class="facet-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
@@ -28,6 +31,12 @@
             <div class="collapse{% if not collapse_agent_response %} show{% endif %}" id="agent-response-body">
                 <div class="chat-message bot-message">
                     <div class="bot-message-content" style="background-color: var(--surface-color);">
+                        {% if generated_answer %}
+                            <div class="generated-answer">
+                                {{ generated_answer | safe }}
+                            </div>
+                        {% endif %}
+
                         {% if response.conversational_text_response %}
                             <p id="agent-response-text">{{ response.conversational_text_response | safe }}</p>
                         {% endif %}
@@ -62,15 +71,13 @@
                         {% endif %}
 
                         {# Show input for a follow-up question, or if the agent response is collapsed (i.e., for a simple search). #}
-                        {% if has_followup or collapse_agent_response %}
-                            <div class="chat-input-area" style="padding: 10px 0 0 0; {% if has_content or has_followup %}border-top: 1px solid #e0e0e0;{% endif %} background: transparent;">
-                                <form action="{{ url_for('agent_search') }}" method="get" class="chat-form" id="followup-form">
-                                    <input type="hidden" name="conversation_id" value="{{ conversation_id }}">
-                                    <textarea name="query" placeholder="{{ 'Answer here...' if has_followup else 'Continue the conversation...' }}" required rows="1" style="resize: none; overflow-y: hidden;"></textarea>
-                                    <button type="submit" title="Send"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg></button>
-                                </form>
-                            </div>
-                        {% endif %}
+                        <div class="chat-input-area" style="padding: 10px 0 0 0; {% if has_content or has_followup %}border-top: 1px solid #e0e0e0;{% endif %} background: transparent;">
+                            <form action="{{ url_for('agent_search') }}" method="get" class="chat-form" id="followup-form">
+                                <input type="hidden" name="conversation_id" value="{{ conversation_id }}">
+                                <textarea name="query" placeholder="{{ 'Answer here...' if has_followup else 'Continue the conversation...' }}" required rows="1" style="resize: none; overflow-y: hidden;"></textarea>
+                                <button type="submit" title="Send"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg></button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -153,6 +160,12 @@
     /* Override the default 75% max-width for chat messages for this specific container */
     #agent-response-body .bot-message {
         max-width: 100%;
+    }
+    .generated-answer {
+        background-color: #f0f4f9;
+        border-left: 4px solid #5684d1;
+        padding: 0.75rem 1rem;
+        margin: 0.75rem 0;
     }
 </style>
 <script>

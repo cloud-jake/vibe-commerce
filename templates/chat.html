@@ -20,6 +20,20 @@
             {% else %}
                 <div class="chat-message bot-message">
                     <div class="bot-message-content">
+                        {% if message.user_query_types %}
+                            <div class="intent-badges mb-2">
+                            {% for type in message.user_query_types %}
+                                <span class="badge bg-secondary fw-normal">{{ type }}</span>
+                            {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% if message.generated_answer %}
+                            <div class="generated-answer">
+                                {{ message.generated_answer | safe }}
+                            </div>
+                        {% endif %}
+
                         {% if message.text %}
                             <p>{{ message.text | safe }}</p>
                         {% endif %}
@@ -128,6 +142,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderBotMessage = (message) => {
         let contentHtml = '<div class="bot-message-content">';
+        if (message.user_query_types && message.user_query_types.length > 0) {
+            contentHtml += '<div class="intent-badges mb-2">';
+            message.user_query_types.forEach(type => {
+                contentHtml += `<span class="badge bg-secondary fw-normal">${type}</span>`;
+            });
+            contentHtml += '</div>';
+        }
+        if (message.generated_answer) {
+            contentHtml += `<div class="generated-answer">${message.generated_answer}</div>`;
+        }
         if (message.text) {
             contentHtml += `<p>${message.text}</p>`;
         }

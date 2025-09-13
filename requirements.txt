@@ -4,3 +4,4 @@ google-cloud-retail
 google-cloud-discoveryengine
 gunicorn
 python-dotenv
+markdown-it-py
