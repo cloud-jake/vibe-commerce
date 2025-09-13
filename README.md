@@ -69,10 +69,7 @@ graph TD
         User -- "HTTP Requests" --&gt; CloudRun
 
         %% Application to AI Services
-        CloudRun -- "API Calls" --&gt; SearchAPI
-        CloudRun --&gt; RecsAPI
-        CloudRun --&gt; ConvoAPI
-        CloudRun --&gt; AutocompleteAPI
+        CloudRun -- "Commerce API Calls" --&gt; "Vertex AI Search for Commerce"
         CloudRun -- "Support Queries" --&gt; ContentSearchAPI
         CloudRun -- "Tracks Events" --&gt; UserEventService
         
