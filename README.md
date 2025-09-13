@@ -66,27 +66,27 @@ graph TD
         %% --- Connections ---
         
         %% User Flow
-        User -- "HTTP Requests" --&gt; CloudRun
+        User--"HTTP Requests"-->CloudRun
 
         %% Application to AI Services
-        CloudRun -- "Commerce API Calls" --&gt; "Vertex AI Search for Commerce"
-        CloudRun -- "Support Queries" --&gt; ContentSearchAPI
-        CloudRun -- "Tracks Events" --&gt; UserEventService
+        CloudRun--"Commerce API Calls"-->"Vertex AI Search for Commerce"
+        CloudRun--"Support Queries"-->ContentSearchAPI
+        CloudRun--"Tracks Events"-->UserEventService
         
         %% AI Model Integration
-        ConvoAPI -- "Uses for Text Generation" --&gt; Gemini
+        ConvoAPI--"Uses for Text Generation"-->Gemini
 
         %% Data Layer Connections
-        UserEventService -- "Writes Events" --&gt; BigQuery
-        SearchAPI -- "Reads Data From" --&gt; BigQuery
-        RecsAPI -- "Reads Data From" --&gt; BigQuery
-        ConvoAPI -- "Reads Data From" --&gt; BigQuery
-        ContentSearchAPI -- "Reads Content From" --&gt; WebsiteDataSource
-        CloudRun -- "Serves Images From" --&gt; GCS
+        UserEventService--"Writes Events"-->BigQuery
+        SearchAPI--"Reads Data From"-->BigQuery
+        RecsAPI--"Reads Data From"-->BigQuery
+        ConvoAPI--"Reads Data From"-->BigQuery
+        ContentSearchAPI--"Reads Content From"-->WebsiteDataSource
+        CloudRun--"Serves Images From"-->GCS
         
         %% Offline Prep Flow
-        Colab -- "Loads Catalog" --&gt; BigQuery
-        Colab -- "Uploads Images" --&gt; GCS
+        Colab--"Loads Catalog"-->BigQuery
+        Colab--"Uploads Images"-->GCS
     end
 ```
 
