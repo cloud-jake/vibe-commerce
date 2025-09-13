@@ -29,21 +29,21 @@ graph TD
         direction TB
 
         %% --- User & Application Layer ---
-        User(["&lt;fa:fa-user&gt; User"])
-        CloudRun["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-run.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;&lt;i&gt;Flask Web App&lt;/i&gt;"]
+        CloudRun["<img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-run.svg' width='40' /><br><b>Cloud Run</b><br><i>Flask Web App</i>"]
+        User(["<fa:fa-user> User"])
 
         %% --- AI Services Layer ---
         subgraph "Vertex AI Services"
             direction TB
             subgraph "Vertex AI Search for Commerce APIs"
                 direction LR
-                SearchAPI["&lt;b&gt;Search&lt;/b&gt;&lt;br&gt;&lt;small&gt;SearchServiceClient&lt;/small&gt;"]
-                RecsAPI["&lt;b&gt;Recommendations&lt;/b&gt;&lt;br&gt;&lt;small&gt;PredictionServiceClient&lt;/small&gt;"]
-                ConvoAPI["&lt;b&gt;Conversational AI&lt;/b&gt;&lt;br&gt;&lt;small&gt;ConversationalSearchServiceClient&lt;/small&gt;"]
-                AutocompleteAPI["&lt;b&gt;Autocomplete&lt;/b&gt;&lt;br&gt;&lt;small&gt;CompletionServiceClient&lt;/small&gt;"]
+                SearchAPI["<b>Search</b><br><small>SearchServiceClient</small>"]
+                RecsAPI["<b>Recommendations</b><br><small>PredictionServiceClient</small>"]
+                ConvoAPI["<b>Conversational AI</b><br><small>ConversationalSearchServiceClient</small>"]
+                AutocompleteAPI["<b>Autocomplete</b><br><small>CompletionServiceClient</small>"]
             end
-            UserEventService["&lt;b&gt;User Event Ingestion&lt;/b&gt;&lt;br&gt;&lt;small&gt;UserEventServiceClient&lt;/small&gt;"]
-            Gemini["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/gemini.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Gemini Model&lt;/b&gt;&lt;br&gt;&lt;i&gt;Powers Conversational AI&lt;/i&gt;"]
+            UserEventService["<b>User Event Ingestion</b><br><small>UserEventServiceClient</small>"]
+            Gemini["<img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/gemini.svg' width='40' /><br><b>Gemini Model</b><br><i>Powers Conversational AI</i>"]
         end
 
         %% --- Data & Offline Layer ---
@@ -51,40 +51,43 @@ graph TD
             direction TB
             subgraph "Data Storage"
                 direction LR
-                BigQuery["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/bigquery.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;BigQuery&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Catalog&lt;br&gt;& User Events&lt;/i&gt;"]
-                GCS["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-storage.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Cloud Storage&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Images&lt;/i&gt;"]
+                BigQuery["<img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/bigquery.svg' width='40' /><br><b>BigQuery</b><br><i>Product Catalog<br>& User Events</i>"]
+                GCS["<img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-storage.svg' width='40' /><br><b>Cloud Storage</b><br><i>Product Images</i>"]
+                SupportDataStore["<img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/discovery-engine.svg' width='40' /><br><b>Discovery Engine</b><br><i>Support Datastore<br>& FAQs</i>"]
             end
             subgraph "Offline Data Generation"
-                Colab["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/colab-enterprise.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Colab Enterprise&lt;/b&gt;&lt;br&gt;&lt;i&gt;(using Gemini & Imagen)&lt;/i&gt;"]
+                Colab["<img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/colab-enterprise.svg' width='40' /><br><b>Colab Enterprise</b><br><i>(using Gemini & Imagen)</i>"]
             end
         end
 
         %% --- Connections ---
         
         %% User Flow
-        User--"HTTP Requests"-->CloudRun
+        User -- "HTTP Requests" --> CloudRun
 
         %% Application to AI Services
-        CloudRun--"API Calls"-->SearchAPI
-        CloudRun-->RecsAPI
-        CloudRun-->ConvoAPI
-        CloudRun-->AutocompleteAPI
-        CloudRun--"Tracks Events"-->UserEventService
+        CloudRun -- "API Calls" --> SearchAPI
+        CloudRun --> RecsAPI
+        CloudRun --> ConvoAPI
+        CloudRun --> AutocompleteAPI
+        CloudRun -- "Tracks Events" --> UserEventService
         
         %% AI Model Integration
-        ConvoAPI--"Uses for Text Generation"-->Gemini
+        ConvoAPI -- "Uses for Text Generation" --> Gemini
 
         %% Data Layer Connections
-        UserEventService--"Writes Events"-->BigQuery
-        SearchAPI--"Reads Data From"-->BigQuery
-        RecsAPI--"Reads Data From"-->BigQuery
-        ConvoAPI--"Reads Data From"-->BigQuery
-        SearchAPI--"Reads Image URIs From"-->GCS
-        CloudRun--"Serves Images From"-->GCS
+        UserEventService -- "Writes Events" --> BigQuery
+        SearchAPI -- "Reads Data From" --> BigQuery
+        RecsAPI -- "Reads Data From" --> BigQuery
+        ConvoAPI -- "Reads Product Data From" --> BigQuery
+        ConvoAPI -- "Reads Support Data From" --> SupportDataStore
+        SearchAPI -- "Reads Image URIs From" --> GCS
+        CloudRun -- "Serves Images From" --> GCS
         
         %% Offline Prep Flow
-        Colab--"Loads Catalog"-->BigQuery
-        Colab--"Uploads Images"-->GCS
+        Colab -- "Loads Catalog" --> BigQuery
+        Colab -- "Uploads Images" --> GCS
+        Colab -- "Indexes FAQs" --> SupportDataStore
     end
 
     %% Styling
@@ -97,7 +100,7 @@ graph TD
     class User userNode;
     class CloudRun appNode;
     class SearchAPI,RecsAPI,ConvoAPI,AutocompleteAPI,UserEventService,Gemini serviceNode;
-    class BigQuery,GCS dataNode;
+    class BigQuery,GCS,SupportDataStore dataNode;
     class Colab prepNode;
 ```
 
