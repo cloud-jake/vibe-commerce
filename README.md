@@ -25,45 +25,71 @@ This application demonstrates a wide range of features available in Vertex AI Se
 
 ```mermaid
 graph TD
-    subgraph "Vibe Commerce - System Architecture"
+    subgraph "Vibe Commerce - System Integration"
         direction TB
 
-        subgraph "Online Serving"
-            User(["&lt;fa:fa-user&gt; User"])
-            CloudRun["&lt;fa:fa-cloud&gt;&lt;br&gt;&lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;&lt;i&gt;Flask Web App&lt;/i&gt;"]
-            
-            subgraph "Vertex AI Search for Commerce APIs"
-                RetailAPI["&lt;fa:fa-tags&gt;&lt;br&gt;&lt;b&gt;Retail API&lt;/b&gt;&lt;br&gt;&lt;i&gt;Search, Recs, Events&lt;/i&gt;"]
-                ConversationalAPI["&lt;fa:fa-comments&gt;&lt;br&gt;&lt;b&gt;Conversational API&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Chat Assistant&lt;/i&gt;"]
-                DiscoveryEngineAPI["&lt;fa:fa-book&gt;&lt;br&gt;&lt;b&gt;Discovery Engine API&lt;/b&gt;&lt;br&gt;&lt;i&gt;Support Document Search&lt;/i&gt;"]
+        %% --- User & Application Layer ---
+        User(["&lt;fa:fa-user&gt; User"])
+        CloudRun["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-run.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;&lt;i&gt;Flask Web App&lt;/i&gt;"]
+
+        %% --- AI Services Layer ---
+        subgraph "Vertex AI Services"
+            direction TB
+            subgraph "Vertex AI Search for Commerce"
+                direction LR
+                SearchAPI["&lt;b&gt;Product Search&lt;/b&gt;&lt;br&gt;&lt;small&gt;SearchServiceClient&lt;/small&gt;"]
+                RecsAPI["&lt;b&gt;Recommendations&lt;/b&gt;&lt;br&gt;&lt;small&gt;PredictionServiceClient&lt;/small&gt;"]
+                ConvoAPI["&lt;b&gt;Conversational AI&lt;/b&gt;&lt;br&gt;&lt;small&gt;ConversationalSearchServiceClient&lt;/small&gt;"]
+                AutocompleteAPI["&lt;b&gt;Autocomplete&lt;/b&gt;&lt;br&gt;&lt;small&gt;CompletionServiceClient&lt;/small&gt;"]
             end
-
-            User -- "Interacts with site" --> CloudRun
-            CloudRun -- "Search, Recs, Events" --> RetailAPI
-            CloudRun -- "AI Assistant (Products)" --> ConversationalAPI
-            ConversationalAPI -- "AI Assistant (Support)" --> DiscoveryEngineAPI
+            subgraph "Vertex AI Search for Content"
+                ContentSearchAPI["&lt;b&gt;Content Search&lt;/b&gt;&lt;br&gt;&lt;small&gt;SearchServiceClient (Discovery)&lt;/small&gt;"]
+            end
+            UserEventService["&lt;b&gt;User Event Ingestion&lt;/b&gt;&lt;br&gt;&lt;small&gt;UserEventServiceClient&lt;/small&gt;"]
+            Gemini["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/gemini.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Gemini Model&lt;/b&gt;&lt;br&gt;&lt;i&gt;Powers Conversational AI&lt;/i&gt;"]
         end
 
-        subgraph "Data & Storage"
-            BigQuery["&lt;fa:fa-database&gt;&lt;br&gt;&lt;b&gt;BigQuery&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Catalog & User Events&lt;/i&gt;"]
-            GCS["&lt;fa:fa-archive&gt;&lt;br&gt;&lt;b&gt;Cloud Storage&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Images & Support Docs&lt;/i&gt;"]
+        %% --- Data & Offline Layer ---
+        subgraph "Data Layer & Offline Preparation"
+            direction TB
+            subgraph "Data Storage"
+                direction LR
+                BigQuery["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/bigquery.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;BigQuery&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Catalog&lt;br&gt;& User Events&lt;/i&gt;"]
+                GCS["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/cloud-storage.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Cloud Storage&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Images&lt;/i&gt;"]
+                WebsiteDataSource["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/website-datastore.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Website&lt;/b&gt;&lt;br&gt;&lt;i&gt;Support Content&lt;/i&gt;"]
+            end
+            subgraph "Offline Data Generation"
+                Colab["&lt;img src='https://raw.githubusercontent.com/cloud-jake/vibe-commerce/main/static/icons/colab-enterprise.svg' width='40' /&gt;&lt;br&gt;&lt;b&gt;Colab Enterprise&lt;/b&gt;&lt;br&gt;&lt;i&gt;(using Gemini & Imagen)&lt;/i&gt;"]
+            end
         end
 
-        subgraph "Offline Data Preparation"
-            Colab["&lt;fa:fa-cogs&gt;&lt;br&gt;&lt;b&gt;Colab Enterprise&lt;/b&gt;&lt;br&gt;&lt;i&gt;Data Prep Notebooks&lt;/i&gt;"]
-            Gemini["&lt;fa:fa-lightbulb&gt;&lt;br&gt;&lt;b&gt;Gemini Model&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Data Generation&lt;/i&gt;"]
-            Imagen["&lt;fa:fa-image&gt;&lt;br&gt;&lt;b&gt;Imagen Model&lt;/b&gt;&lt;br&gt;&lt;i&gt;Product Image Generation&lt;/i&gt;"]
-        end
+        %% --- Connections ---
+        
+        %% User Flow
+        User -- "HTTP Requests" --&gt; CloudRun
 
-        %% Connections between subgraphs
-        RetailAPI -- "Reads from" --> BigQuery
-        ConversationalAPI -- "Converses over" --> BigQuery
-        DiscoveryEngineAPI -- "Searches" --> GCS
-        CloudRun -- "Serves images from" --> GCS
-        Colab -- "Loads product catalog to" --> BigQuery
-        Colab -- "Generates data with" --> Gemini
-        Colab -- "Generates images with" --> Imagen
-        Colab -- "Stores generated images in" --> GCS
+        %% Application to AI Services
+        CloudRun -- "API Calls" --&gt; SearchAPI
+        CloudRun --&gt; RecsAPI
+        CloudRun --&gt; ConvoAPI
+        CloudRun --&gt; AutocompleteAPI
+        CloudRun -- "Support Queries" --&gt; ContentSearchAPI
+        CloudRun -- "Tracks Events" --&gt; UserEventService
+        
+        %% AI Model Integration
+        ConvoAPI -- "Uses for Text Generation" --&gt; Gemini
+
+        %% Data Layer Connections
+        UserEventService -- "Writes Events" --&gt; BigQuery
+        SearchAPI -- "Reads Data From" --&gt; BigQuery
+        RecsAPI -- "Reads Data From" --&gt; BigQuery
+        ConvoAPI -- "Reads Data From" --&gt; BigQuery
+        ContentSearchAPI -- "Reads Content From" --&gt; WebsiteDataSource
+        CloudRun -- "Serves Images From" --&gt; GCS
+        
+        %% Offline Prep Flow
+        Colab -- "Loads Catalog" --&gt; BigQuery
+        Colab -- "Uploads Images" --&gt; GCS
     end
 ```
 
