@@ -8,6 +8,7 @@ Allow: /
 
 # Disallow crawling of user-specific, API, and checkout-related paths
 Disallow: /api/
+Disallow: /browse
 Disallow: /cart
 Disallow: /add_to_cart
 Disallow: /remove_from_cart
