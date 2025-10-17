@@ -24,6 +24,9 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
+# --- Support Agent Feature Flag ---
+ENABLE_SUPPORT_AGENT = os.environ.get("ENABLE_SUPPORT_AGENT", "true").lower() == "true"
+
 # --- Support Search Configuration ---
 # These are for the separate Discovery Engine datastore for support content.
 SUPPORT_PROJECT_ID = os.environ.get("SUPPORT_PROJECT_ID", PROJECT_ID)
@@ -44,11 +47,14 @@ REQUIRED_CONFIG = {
     "CATALOG_ID": CATALOG_ID,
     "SERVING_CONFIG_ID": SERVING_CONFIG_ID,
     "RECOMMENDATION_SERVING_CONFIG_ID": RECOMMENDATION_SERVING_CONFIG_ID,
-    "SUPPORT_ENGINE_ID": SUPPORT_ENGINE_ID,
     "SECRET_KEY": SECRET_KEY,
     "GOOGLE_CLIENT_ID": GOOGLE_CLIENT_ID,
     "GOOGLE_CLIENT_SECRET": GOOGLE_CLIENT_SECRET,
 }
+
+# Conditionally require SUPPORT_ENGINE_ID only if the feature is enabled.
+if ENABLE_SUPPORT_AGENT:
+    REQUIRED_CONFIG["SUPPORT_ENGINE_ID"] = SUPPORT_ENGINE_ID
 
 missing_vars = [key for key, value in REQUIRED_CONFIG.items() if not value]
 if missing_vars:

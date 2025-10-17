@@ -94,18 +94,22 @@ user_event_client = UserEventServiceClient()
 # Initialize the Conversational Search Service Client from v2alpha
 conversational_search_client = ConversationalSearchServiceClient()
 
-# Initialize the Discovery Engine Conversational Search Service Client for support answers
-support_answer_client = discoveryengine.ConversationalSearchServiceClient()
-
 # Initialize a markdown parser for formatting generated answers
 markdown_parser = MarkdownIt()
 
-# Placement for support search
-support_serving_config = (
-    f"projects/{config.SUPPORT_PROJECT_ID}/locations/{config.SUPPORT_LOCATION}/"
-    f"collections/{config.SUPPORT_COLLECTION_ID}/engines/{config.SUPPORT_ENGINE_ID}/"
-    f"servingConfigs/{config.SUPPORT_SERVING_CONFIG_ID}"
-)
+# --- Conditional Support Agent Client Initialization ---
+support_answer_client = None
+support_serving_config = None
+if config.ENABLE_SUPPORT_AGENT:
+    # Initialize the Discovery Engine Conversational Search Service Client for support answers
+    support_answer_client = discoveryengine.ConversationalSearchServiceClient()
+    # Placement for support search
+    support_serving_config = (
+        f"projects/{config.SUPPORT_PROJECT_ID}/locations/{config.SUPPORT_LOCATION}/"
+        f"collections/{config.SUPPORT_COLLECTION_ID}/engines/{config.SUPPORT_ENGINE_ID}/"
+        f"servingConfigs/{config.SUPPORT_SERVING_CONFIG_ID}"
+    )
+
 # Placement for conversational search, using 'default_search' as per the guide
 conversational_placement = (
     f"projects/{config.PROJECT_ID}/locations/{config.LOCATION}/catalogs/"
@@ -1202,7 +1206,7 @@ def agent_search():
             matched_type = next(iter(user_query_types.intersection(support_query_types)))
             print(f"INFO: Handling '{matched_type}' query type with generated answer flow in agent search.")
             try:
-                if config.SUPPORT_ENGINE_ID:
+                if config.ENABLE_SUPPORT_AGENT and support_answer_client:
                     # Use the streamlined `answer_query` method for generated answers.
                     answer_generation_spec = discoveryengine.AnswerQueryRequest.AnswerGenerationSpec(
                         model_spec=discoveryengine.AnswerQueryRequest.AnswerGenerationSpec.ModelSpec(model_version="stable"),
@@ -1396,7 +1400,7 @@ def api_chat():
 
         # Category 2: Support and information queries with Generated Answers
         support_query_types = {'ORDER_SUPPORT', 'DEALS_AND_COUPONS', 'STORE_RELEVANT', 'RETAIL_SUPPORT'}
-        if not user_query_types.isdisjoint(support_query_types):
+        if config.ENABLE_SUPPORT_AGENT and not user_query_types.isdisjoint(support_query_types):
             # Get the specific support type that was matched
             matched_type = next(iter(user_query_types.intersection(support_query_types)))
             print(f"INFO: Handling '{matched_type}' query type with generated answer flow.")
@@ -1418,7 +1422,7 @@ def api_chat():
 
             try:
                 # Use the new support engine config for generated answers
-                if config.SUPPORT_ENGINE_ID:
+                if support_answer_client:
                     # Use the streamlined `answer_query` method for generated answers.
                     answer_generation_spec = discoveryengine.AnswerQueryRequest.AnswerGenerationSpec(
                         model_spec=discoveryengine.AnswerQueryRequest.AnswerGenerationSpec.ModelSpec(model_version="stable"),
