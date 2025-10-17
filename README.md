@@ -116,10 +116,11 @@ The following environment variables are required to configure the application. T
 | `GOOGLE_CLIENT_ID`                |   Yes    | The Client ID for your Google OAuth 2.0 application.                                                    |
 | `GOOGLE_CLIENT_SECRET`            |   Yes    | The Client Secret for your Google OAuth 2.0 application.                                                |
 | `SECRET_KEY`                      |   Yes    | A long, random string used to securely sign the session cookie.                                         |
-| `SUPPORT_ENGINE_ID`               |   Yes    | The ID of the Discovery Engine datastore used for support queries.                                      |
+| `ENABLE_SUPPORT_AGENT`            |    No    | Set to `false` to disable the support agent feature. Defaults to `true`.                                |
+| `SUPPORT_ENGINE_ID`               | Optional | The ID of the Discovery Engine datastore used for support queries. Required if `ENABLE_SUPPORT_AGENT` is `true`. |
 | `SITE_NAME`                       |    No    | The name of the website, displayed in the UI. Defaults to "Vibe Commerce".                              |
 | `SITE_LOGO_URL`                   |    No    | The path to the site logo image. Defaults to `/static/logo.png`.                                        |
-| `SUPPORT_PROJECT_ID`              |    No    | The project ID for the support datastore. Defaults to the main `PROJECT_ID`.                            |
-| `SUPPORT_LOCATION`                |    No    | The location of the support datastore. Defaults to `global`.                                            |
-| `SUPPORT_COLLECTION_ID`           |    No    | The collection ID for the support datastore. Defaults to `default_collection`.                          |
-| `SUPPORT_SERVING_CONFIG_ID`       |    No    | The serving config ID for the support datastore. Defaults to `default_search`.                          |
+| `SUPPORT_PROJECT_ID`              | Optional | The project ID for the support datastore. Defaults to the main `PROJECT_ID`.                            |
+| `SUPPORT_LOCATION`                | Optional | The location of the support datastore. Defaults to `global`.                                            |
+| `SUPPORT_COLLECTION_ID`           | Optional | The collection ID for the support datastore. Defaults to `default_collection`.                          |
+| `SUPPORT_SERVING_CONFIG_ID`       | Optional | The serving config ID for the support datastore. Defaults to `default_search`.                          |
