@@ -35,6 +35,17 @@ SUPPORT_COLLECTION_ID = os.environ.get("SUPPORT_COLLECTION_ID", "default_collect
 SUPPORT_ENGINE_ID = os.environ.get("SUPPORT_ENGINE_ID")
 SUPPORT_SERVING_CONFIG_ID = os.environ.get("SUPPORT_SERVING_CONFIG_ID", "default_search")
 
+# --- Support Intent URLs (Optional) ---
+# These URLs are used by the conversational agent to direct users to the
+# correct support pages when a relevant intent is detected. They default to
+# internal routes if not explicitly set in the environment.
+SUPPORT_INTENT_URLS = {
+    "ORDER_SUPPORT": os.environ.get("SUPPORT_URL_ORDER_SUPPORT"),
+    "DEALS_AND_COUPONS": os.environ.get("SUPPORT_URL_DEALS_AND_COUPONS"),
+    "STORE_RELEVANT": os.environ.get("SUPPORT_URL_STORE_RELEVANT"),
+    "RETAIL_SUPPORT": os.environ.get("SUPPORT_URL_RETAIL_SUPPORT"),
+}
+
 # --- Site Branding Configuration (Optional) ---
 SITE_NAME = os.environ.get("SITE_NAME", "Vibe Commerce")
 SITE_LOGO_URL = os.environ.get("SITE_LOGO_URL", "/static/logo.png")

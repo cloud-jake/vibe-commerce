@@ -192,6 +192,25 @@ def _process_facets(facets_from_api, selected_facets):
             
     return processed_facets
 
+def _get_support_links():
+    """
+    Constructs a dictionary of URLs for support-related intents.
+    It prioritizes URLs from the environment configuration and falls back to
+    generating URLs for internal routes if a configuration is not set.
+    """
+    # Map of intent names to their default internal Flask route names.
+    default_routes = {
+        "ORDER_SUPPORT": "orders",
+        "DEALS_AND_COUPONS": "promotions",
+        "STORE_RELEVANT": "stores",
+        "RETAIL_SUPPORT": "support",
+    }
+    
+    return {
+        intent: config.SUPPORT_INTENT_URLS.get(intent) or url_for(route_name)
+        for intent, route_name in default_routes.items()
+    }
+
 @app.context_processor
 def inject_shared_variables():
     """Injects variables needed in all templates."""
@@ -1190,10 +1209,7 @@ def agent_search():
         # --- 4. Handle non-LLM/Support queries (generate custom text and links) ---
         generated_answer = ""
         page_links = []
-        support_links = {
-            'order_support': url_for('orders'), 'deals_and_coupons': url_for('promotions'),
-            'store_relevant': url_for('stores'), 'retail_support': url_for('support')
-        }
+        support_links = _get_support_links()
         support_query_types = {'ORDER_SUPPORT', 'DEALS_AND_COUPONS', 'STORE_RELEVANT', 'RETAIL_SUPPORT'}
 
         if 'RETAIL_IRRELEVANT' in user_query_types:
@@ -1244,10 +1260,10 @@ def agent_search():
                 'RETAIL_SUPPORT': "For questions about purchases, payment methods, returns, or shipping, our support page has the answers."
             }
             page_link_info = {
-                'ORDER_SUPPORT': {'text': "Go to My Orders", 'url': support_links['order_support']},
-                'DEALS_AND_COUPONS': {'text': "View Promotions", 'url': support_links['deals_and_coupons']},
-                'STORE_RELEVANT': {'text': "Find a Store", 'url': support_links['store_relevant']},
-                'RETAIL_SUPPORT': {'text': "Visit Support", 'url': support_links['retail_support']}
+                'ORDER_SUPPORT': {'text': "Go to My Orders", 'url': support_links.get('ORDER_SUPPORT')},
+                'DEALS_AND_COUPONS': {'text': "View Promotions", 'url': support_links.get('DEALS_AND_COUPONS')},
+                'STORE_RELEVANT': {'text': "Find a Store", 'url': support_links.get('STORE_RELEVANT')},
+                'RETAIL_SUPPORT': {'text': "Visit Support", 'url': support_links.get('RETAIL_SUPPORT')}
             }
             response.conversational_text_response = default_texts[matched_type]
             page_links.append(page_link_info[matched_type])
@@ -1369,14 +1385,7 @@ def api_chat():
         products_for_session = []
         search_response_for_event = None
 
-        # Placeholder URLs for demonstration purposes. In a real application,
-        # these would point to actual pages for orders, deals, etc.
-        support_links = {
-            'order_support': url_for('orders'),
-            'deals_and_coupons': url_for('promotions'),
-            'store_relevant': url_for('stores'),
-            'retail_support': url_for('support')
-        }
+        support_links = _get_support_links()
 
         # Category 1: Irrelevant queries that don't require an LLM answer
         if 'RETAIL_IRRELEVANT' in user_query_types:
@@ -1407,10 +1416,10 @@ def api_chat():
 
             generated_answer = ""
             page_link_info = {
-                'ORDER_SUPPORT': {'text': "Go to My Orders", 'url': support_links['order_support']},
-                'DEALS_AND_COUPONS': {'text': "View Promotions", 'url': support_links['deals_and_coupons']},
-                'STORE_RELEVANT': {'text': "Find a Store", 'url': support_links['store_relevant']},
-                'RETAIL_SUPPORT': {'text': "Visit Support", 'url': support_links['retail_support']}
+                'ORDER_SUPPORT': {'text': "Go to My Orders", 'url': support_links.get('ORDER_SUPPORT')},
+                'DEALS_AND_COUPONS': {'text': "View Promotions", 'url': support_links.get('DEALS_AND_COUPONS')},
+                'STORE_RELEVANT': {'text': "Find a Store", 'url': support_links.get('STORE_RELEVANT')},
+                'RETAIL_SUPPORT': {'text': "Visit Support", 'url': support_links.get('RETAIL_SUPPORT')}
             }
 
             default_texts = {
