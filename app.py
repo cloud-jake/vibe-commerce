@@ -35,8 +35,20 @@ from google.protobuf import struct_pb2
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
+import utils
+from flask_wtf.csrf import CSRFProtect
+from flask_session import Session
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+
+# Enable CSRF protection
+csrf = CSRFProtect(app)
+
+# Configure Server-side Session
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+Session(app)
 
 # Enable the 'do' extension for Jinja2 templates. This is required for the
 # complex category hierarchy processing in `categories.html`.
@@ -116,100 +128,9 @@ conversational_placement = (
     f"{config.CATALOG_ID}/placements/default_search"
 )
 
-def _process_facets(facets_from_api, selected_facets):
-    """
-    Converts the facet protobuf objects from the API into a more
-    template-friendly list of dictionaries with a consistent structure.
-    This helps prevent client-side JS errors from inconsistent data shapes.
-    """
-    processed_facets = []
-    if not facets_from_api:
-        return processed_facets
+# _process_facets moved to utils.py
 
-    # A map for creating user-friendly display names for facet keys.
-    display_name_map = {
-        'colorFamilies': 'Color',
-        'categories': 'Category'
-    }
-
-    for facet in facets_from_api:
-        facet_key = facet.key
-
-        # Prepare a key for generating the display name, stripping "attributes."
-        temp_display_key = facet_key
-        if temp_display_key.lower().startswith('attributes.'):
-            temp_display_key = temp_display_key.split('.', 1)[1]
-
-        # Use the original facet_key for the map lookup, but the cleaned-up
-        # key for the .title() fallback.
-        display_name = display_name_map.get(facet_key, temp_display_key.title())
-
-        processed_values = []
-        for facet_value in facet.values:
-            value_str = ""
-            display_str = ""
-
-            if facet_value.value:  # Textual facet
-                value_str = facet_value.value
-                display_str = facet_value.value
-            elif facet_value.interval:  # Numerical facet
-                min_val = facet_value.interval.minimum
-                max_val = facet_value.interval.maximum
-                
-                # Create the value string for the URL parameter, e.g., "25.0-50.0"
-                # The client-side parsing logic expects this format.
-                value_str = f"{min_val or ''}-{max_val or ''}"
-
-                # Create a user-friendly display string
-                if facet_key == 'price':
-                    if min_val is not None and max_val is not None:
-                        display_str = f"${min_val:g} - ${max_val:g}"
-                    elif min_val is not None:
-                        display_str = f"Over ${min_val:g}"
-                    elif max_val is not None:
-                        display_str = f"Under ${max_val:g}"
-                elif facet_key == 'rating':
-                    if min_val is not None and max_val is not None:
-                        display_str = f"{min_val:g} - {max_val:g} Stars"
-                    elif min_val is not None:
-                        display_str = f"{min_val:g}+ Stars"
-
-            # Check if this facet value is currently selected
-            is_selected = value_str in selected_facets.get(facet_key, [])
-
-            # Only add the facet value if it has a count
-            if facet_value.count > 0:
-                processed_values.append({
-                    'value': value_str, 'display': display_str,
-                    'count': facet_value.count, 'selected': is_selected,
-                })
-
-        # Only add the facet group if it has values with counts
-        if processed_values:
-            processed_facets.append({
-                'key': facet_key, 'display_name': display_name, 'values': processed_values
-            })
-            
-    return processed_facets
-
-def _get_support_links():
-    """
-    Constructs a dictionary of URLs for support-related intents.
-    It prioritizes URLs from the environment configuration and falls back to
-    generating URLs for internal routes if a configuration is not set.
-    """
-    # Map of intent names to their default internal Flask route names.
-    default_routes = {
-        "ORDER_SUPPORT": "orders",
-        "DEALS_AND_COUPONS": "promotions",
-        "STORE_RELEVANT": "stores",
-        "RETAIL_SUPPORT": "support",
-    }
-    
-    return {
-        intent: config.SUPPORT_INTENT_URLS.get(intent) or url_for(route_name)
-        for intent, route_name in default_routes.items()
-    }
+# _get_support_links moved to utils.py
 
 @app.context_processor
 def inject_shared_variables():
@@ -240,8 +161,13 @@ def robots_txt():
     return send_from_directory(app.static_folder, 'robots.txt')
 
 @app.route('/sitemap.xml')
+# Simple in-memory cache for sitemap
+@app.route('/sitemap.xml')
 def sitemap():
     """Dynamically generates a sitemap.xml for the site."""
+    # Check if we have a cached response
+    if hasattr(sitemap, 'cached_response'):
+        return sitemap.cached_response
     try:
         # Static pages
         static_urls = [
@@ -297,6 +223,10 @@ def sitemap():
         response = make_response(sitemap_xml)
         response.headers["Content-Type"] = "application/xml"
         
+        # Cache the response
+        sitemap.cached_response = response
+        return response
+        sitemap.cached_response = response
         return response
 
     except Exception as e:
@@ -430,15 +360,17 @@ def index():
                     "productDetails": product_details_list,
                 }
 
-                # Construct and write the event
-                parent = user_event_client.catalog_path(
-                    project=config.PROJECT_ID,
-                    location=config.LOCATION,
-                    catalog=config.CATALOG_ID
+                # Construct and write the event using utils
+                utils.track_event(
+                    event_type="home-page-view",
+                    visitor_id=session.get('visitor_id'),
+                    user_info=UserInfo.to_dict(user_info_proto),
+                    uri=request.url,
+                    referrer=request.referrer,
+                    page_view_id=page_view_id,
+                    attribution_token=response.attribution_token,
+                    product_details=product_details_list
                 )
-                logged_event = UserEvent.from_json(json.dumps(logged_event_payload))
-                write_request = WriteUserEventRequest(parent=parent, user_event=logged_event)
-                user_event_client.write_user_event(request=write_request)
                 print(f"Successfully wrote home-page-view with recommendation impression for visitor {session.get('visitor_id')}")
 
             except Exception as e:
@@ -620,33 +552,14 @@ def browse_category(category_name):
     # --- Handle Facets ---
     # For a browse request, the primary filter is the category itself.
     # Additional filters from user interaction are ANDed with it.
-    facet_filters = [f'categories: ANY("{category_name}")']
-    selected_facets = {}
-    processed_keys = {'page', 'attribution_token'}
-
-    for key in request.args:
-        if key not in processed_keys:
-            values = request.args.getlist(key)
-            selected_facets[key] = values
-            # This logic is similar to the main search page for consistency
-            if key in ['price', 'rating']:
-                range_filters = []
-                filter_key = 'price' if key == 'price' else key
-                for v in values:
-                    try:
-                        min_val_str, max_val_str = v.split('-', 1)
-                        range_filter_parts = []
-                        if min_val_str: range_filter_parts.append(f'{filter_key} >= {float(min_val_str)}')
-                        if max_val_str: range_filter_parts.append(f'{filter_key} < {float(max_val_str)}')
-                        if range_filter_parts: range_filters.append(f"({' AND '.join(range_filter_parts)})")
-                    except (ValueError, IndexError): continue
-                if range_filters: facet_filters.append(f"({' OR '.join(range_filters)})")
-            else:
-                filter_values = ', '.join([f'"{v}"' for v in values])
-                facet_filters.append(f'{key}: ANY({filter_values})')
-            processed_keys.add(key)
-
-    search_filter = " AND ".join(facet_filters)
+    search_filter, selected_facets = utils.build_search_filter(request.args, exclude_keys={'page', 'attribution_token'})
+    
+    # Add the category filter
+    category_filter = f'categories: ANY("{category_name}")'
+    if search_filter:
+        search_filter = f'{category_filter} AND {search_filter}'
+    else:
+        search_filter = category_filter
 
     # --- Build Search Request for BROWSE ---
     # Define explicit facet specifications. Using static intervals for numerical
@@ -705,7 +618,7 @@ def browse_category(category_name):
         search_pager = search_client.search(search_request)
         search_response = next(search_pager.pages)
         total_pages = int(math.ceil(search_response.total_size / page_size)) if search_response.total_size > 0 else 0
-        processed_facets = _process_facets(search_response.facets, selected_facets)
+        processed_facets = utils.process_facets(search_response.facets, selected_facets)
         results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
         page_categories_json = json.dumps([category_name]) # The category being browsed
         return render_template('browse_results.html',
@@ -753,51 +666,7 @@ def search():
         return redirect(url_for('index'))
  
     # --- Handle Facets ---
-    facet_filters = []
-    selected_facets = {}
-    # Use a set to avoid reprocessing keys when using getlist
-    processed_keys = {'query', 'expand', 'page', 'attribution_token'}
-
-    for key in request.args:
-        if key not in processed_keys:
-            values = request.args.getlist(key)
-            selected_facets[key] = values
-
-            # Check if the key is for a numerical facet we defined
-            if key in ['price', 'rating']:
-                # For numerical facets, we expect values like "10.00-25.00"
-                # and build filters like "(price >= 10.00 AND price < 25.00)".
-                # Multiple selected ranges for the same key are ORed together.
-                range_filters = []
-
-                # The API's filter syntax for price is just 'price', not the full path.
-                filter_key = 'price' if key == 'price' else key
-
-                for v in values:
-                    try:
-                        min_val_str, max_val_str = v.split('-', 1)
-                        range_filter_parts = []
-                        if min_val_str:
-                            range_filter_parts.append(f'{filter_key} >= {float(min_val_str)}')
-                        if max_val_str:
-                            # The API's interval is exclusive for the maximum.
-                            range_filter_parts.append(f'{filter_key} < {float(max_val_str)}')
-                        if range_filter_parts:
-                            range_filters.append(f"({' AND '.join(range_filter_parts)})")
-                    except (ValueError, IndexError):
-                        # Ignore malformed range values
-                        continue
-                if range_filters:
-                    facet_filters.append(f"({' OR '.join(range_filters)})")
-            else:
-                # Existing logic for textual facets
-                filter_values = ', '.join([f'"{v}"' for v in values])
-                facet_filters.append(f'{key}: ANY({filter_values})')
-
-            processed_keys.add(key)
-
-    # Combine all facet filters with AND
-    search_filter = " AND ".join(facet_filters) if facet_filters else ""
+    search_filter, selected_facets = utils.build_search_filter(request.args, exclude_keys={'query', 'expand', 'page', 'attribution_token'})
 
     # Check for a URL parameter to control query expansion. Default to True.
     use_expansion = request.args.get('expand', 'true').lower() == 'true'
@@ -905,7 +774,7 @@ def search():
         if search_response.total_size > 0:
             total_pages = int(math.ceil(search_response.total_size / page_size))
 
-        processed_facets = _process_facets(search_response.facets, selected_facets)
+        processed_facets = utils.process_facets(search_response.facets, selected_facets)
         # The search_response.results is a list of proto messages, not directly
         # JSON serializable. Convert them to dicts for the event tracker.
         results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_response.results]
@@ -1011,55 +880,7 @@ def product_detail(product_id):
         return render_template('product_detail.html', error=str(e))
 
 
-def _track_conversational_search_event(query, conversation_id, search_response, attribution_token=None):
-    """Helper to track a 'search' event for a conversational interaction."""
-    try:
-        parent = user_event_client.catalog_path(
-            project=config.PROJECT_ID,
-            location=config.LOCATION,
-            catalog=config.CATALOG_ID
-        )
-
-        # Aggregate product IDs from the search response
-        product_ids = []
-        if search_response and search_response.results:
-            for result in search_response.results:
-                # Use the top-level 'id' from the SearchResult, which is guaranteed
-                # to be the product ID. This is more robust than result.product.id.
-                product_ids.append(result.id)
-
-        product_details_list = [{"product": {"id": pid}} for pid in product_ids]
-
-        user_info = {
-            "userAgent": request.user_agent.string,
-            "ipAddress": request.remote_addr
-        }
-        if session.get('user'):
-            user_info["userId"] = session['user']['sub']
-
-        # The attribution token comes from the secondary search response to link the event
-        # to the model's output and the products that were shown.
-        event_attribution_token = search_response.attribution_token if search_response else attribution_token
-
-        event_payload = {
-            "eventType": "search",
-            "visitorId": session.get('visitor_id'),
-            "userInfo": user_info,
-            "searchQuery": query,
-            "attributionToken": event_attribution_token,
-            "productDetails": product_details_list,
-            "sessionId": conversation_id, # Link event to the conversation
-            "uri": request.url,
-            "referrerUri": request.referrer,
-        }
-
-        user_event = UserEvent.from_json(json.dumps(event_payload))
-        write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
-        user_event_client.write_user_event(request=write_request)
-        print(f"Successfully wrote conversational search event for visitor {session.get('visitor_id')}")
-
-    except Exception as e:
-        print(f"Error writing conversational search event: {e}\n{traceback.format_exc()}")
+# _track_conversational_search_event replaced by utils.track_event
 
 
 @app.route('/agent-search')
@@ -1139,32 +960,7 @@ def agent_search():
         offset = (page - 1) * page_size
 
         # Facet and Filter handling (copied from /search endpoint)
-        facet_filters = []
-        selected_facets = {}
-        processed_keys = {'query', 'conversation_id', 'attribution_token', 'page'}
-
-        for key in request.args:
-            if key not in processed_keys:
-                values = request.args.getlist(key)
-                selected_facets[key] = values
-                if key in ['price', 'rating']:
-                    range_filters = []
-                    filter_key = 'price' if key == 'price' else key
-                    for v in values:
-                        try:
-                            min_val_str, max_val_str = v.split('-', 1)
-                            range_filter_parts = []
-                            if min_val_str: range_filter_parts.append(f'{filter_key} >= {float(min_val_str)}')
-                            if max_val_str: range_filter_parts.append(f'{filter_key} < {float(max_val_str)}')
-                            if range_filter_parts: range_filters.append(f"({' AND '.join(range_filter_parts)})")
-                        except (ValueError, IndexError): continue
-                    if range_filters: facet_filters.append(f"({' OR '.join(range_filters)})")
-                else:
-                    filter_values = ', '.join([f'"{v}"' for v in values])
-                    facet_filters.append(f'{key}: ANY({filter_values})')
-                processed_keys.add(key)
-        
-        search_filter = " AND ".join(facet_filters) if facet_filters else ""
+        search_filter, selected_facets = utils.build_search_filter(request.args, exclude_keys={'query', 'conversation_id', 'attribution_token', 'page'})
 
         # Facet Specs (copied from /search endpoint)
         facet_specs = [
@@ -1201,7 +997,7 @@ def agent_search():
                 if main_search_response:
                     search_results = main_search_response.results
                     total_pages = int(math.ceil(main_search_response.total_size / page_size)) if main_search_response.total_size > 0 else 0
-                    processed_facets = _process_facets(main_search_response.facets, selected_facets)
+                    processed_facets = utils.process_facets(main_search_response.facets, selected_facets)
                     results_for_js = [SearchResponse.SearchResult.to_dict(r) for r in search_results]
             except Exception as e:
                 print(f"Error fetching main product grid for agent search: {e}")
@@ -1209,7 +1005,7 @@ def agent_search():
         # --- 4. Handle non-LLM/Support queries (generate custom text and links) ---
         generated_answer = ""
         page_links = []
-        support_links = _get_support_links()
+        support_links = utils.get_support_links()
         support_query_types = {'ORDER_SUPPORT', 'DEALS_AND_COUPONS', 'STORE_RELEVANT', 'RETAIL_SUPPORT'}
 
         if 'RETAIL_IRRELEVANT' in user_query_types:
@@ -1274,7 +1070,32 @@ def agent_search():
         collapse_agent_response = 'SIMPLE_PRODUCT_SEARCH' in user_query_types
 
         # --- 5. Track Event and Render ---
-        _track_conversational_search_event(query, new_conversation_id, main_search_response, attribution_token)
+        # --- 5. Track Event and Render ---
+        # Aggregate product IDs from the search response
+        product_ids = []
+        if main_search_response and main_search_response.results:
+            for result in main_search_response.results:
+                product_ids.append(result.id)
+        product_details_list = [{"product": {"id": pid}} for pid in product_ids]
+
+        user_info = {
+            "userAgent": request.user_agent.string,
+            "ipAddress": request.remote_addr
+        }
+        if session.get('user'):
+            user_info["userId"] = session['user']['sub']
+            
+        utils.track_event(
+            event_type="search",
+            visitor_id=session.get('visitor_id'),
+            user_info=user_info,
+            uri=request.url,
+            referrer=request.referrer,
+            search_query=query,
+            attribution_token=main_search_response.attribution_token if main_search_response else attribution_token,
+            product_details=product_details_list,
+            session_id=new_conversation_id
+        )
 
         return render_template(
             'agent_search_results.html',
@@ -1385,7 +1206,7 @@ def api_chat():
         products_for_session = []
         search_response_for_event = None
 
-        support_links = _get_support_links()
+        support_links = utils.get_support_links()
 
         # Category 1: Irrelevant queries that don't require an LLM answer
         if 'RETAIL_IRRELEVANT' in user_query_types:
@@ -1532,12 +1353,6 @@ def api_chat():
         # to include the attributionToken from the secondary search response to link
         # this event to the model's output and the products that were shown.
         try:
-            parent = user_event_client.catalog_path(
-                project=config.PROJECT_ID,
-                location=config.LOCATION,
-                catalog=config.CATALOG_ID
-            )
-
             # Extract product IDs from the results for the event payload
             product_ids = [p['id'] for p in products_for_session]
             product_details_list = [{"product": {"id": pid}} for pid in product_ids]
@@ -1552,24 +1367,17 @@ def api_chat():
             # The attribution token comes from the secondary search response, not the conversational one.
             event_attribution_token = search_response_for_event.attribution_token if search_response_for_event else None
 
-            event_payload = {
-                "eventType": "search",
-                "visitorId": session.get('visitor_id'),
-                "userInfo": user_info,
-                "searchQuery": query,
-                "attributionToken": event_attribution_token,
-                "productDetails": product_details_list,
-                # The UserEvent object uses 'sessionId' to group related events.
-                # We can use the 'conversation_id' from the chat response for this purpose.
-                "sessionId": new_conversation_id,
-                "uri": url_for('chat', _external=True),
-                "referrerUri": request.referrer,
-            }
-
-            user_event = UserEvent.from_json(json.dumps(event_payload))
-            write_request = WriteUserEventRequest(parent=parent, user_event=user_event)
-            user_event_client.write_user_event(request=write_request)
-            print(f"Successfully wrote conversational search event for visitor {session.get('visitor_id')}")
+            utils.track_event(
+                event_type="search",
+                visitor_id=session.get('visitor_id'),
+                user_info=user_info,
+                uri=url_for('chat', _external=True),
+                referrer=request.referrer,
+                search_query=query,
+                attribution_token=event_attribution_token,
+                product_details=product_details_list,
+                session_id=new_conversation_id
+            )
 
         except Exception as e:
             # Log the error but don't block the user's chat experience

@@ -6,98 +6,114 @@
 <div class="chat-container">
     <div class="chat-history" id="chat-history">
         {% if not chat_history %}
-            <div class="chat-message bot-message">                
-                <div class="bot-message-content">
-                    <p>Welcome to the Vibe Commerce AI assistant! How can I help you find the perfect product today?</p>
-                </div>
+        <div class="chat-message bot-message">
+            <div class="bot-message-content">
+                <p>Welcome to the Vibe Commerce AI assistant! How can I help you find the perfect product today?</p>
             </div>
+        </div>
         {% endif %}
         {% for message in chat_history %}
-            {% if message.is_user %}
-                <div class="chat-message user-message">
-                    <p>{{ message.text }}</p>
+        {% if message.is_user %}
+        <div class="chat-message user-message">
+            <p>{{ message.text }}</p>
+        </div>
+        {% else %}
+        <div class="chat-message bot-message">
+            <div class="bot-message-content">
+                {% if message.user_query_types %}
+                <div class="intent-badges mb-2">
+                    {% for type in message.user_query_types %}
+                    <span class="badge bg-secondary fw-normal">{{ type }}</span>
+                    {% endfor %}
                 </div>
-            {% else %}
-                <div class="chat-message bot-message">
-                    <div class="bot-message-content">
-                        {% if message.user_query_types %}
-                            <div class="intent-badges mb-2">
-                            {% for type in message.user_query_types %}
-                                <span class="badge bg-secondary fw-normal">{{ type }}</span>
-                            {% endfor %}
-                            </div>
-                        {% endif %}
+                {% endif %}
 
-                        {% if message.generated_answer %}
-                            <div class="generated-answer">
-                                {{ message.generated_answer | safe }}
-                            </div>
-                        {% endif %}
+                {% if message.generated_answer %}
+                <div class="generated-answer">
+                    {{ message.generated_answer | safe }}
+                </div>
+                {% endif %}
 
-                        {% if message.text %}
-                            <p>{{ message.text | safe }}</p>
-                        {% endif %}
+                {% if message.text %}
+                <p>{{ message.text | safe }}</p>
+                {% endif %}
 
-                        {% if message.products %}
-                            <div class="product-carousel">
-                                <div class="product-grid">
-                                    {# The products are stored as dictionaries in the session, so we access keys with dot notation. #}
-                                    {# The keys are camelCase (e.g., 'priceInfo') as they come from the .to_dict() conversion. #}
-                                    {% for result in message.products %}
-                                        {% set product = result.product %}
-                                        <div class="product-card">
-                                            <a href="{{ url_for('product_detail', product_id=result.id) }}" target="_blank" rel="noopener noreferrer">
-                                                <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}" alt="{{ product.title or 'Untitled Product' }}">
-                                                <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
-                                                {% if product.price_info and product.price_info.price is defined and product.price_info.price is not none %}
-                                                    <p class="price">${{ "%.2f"|format(product.price_info.price) }}</p>
-                                                {% else %}
-                                                    <p class="price price-unavailable">Price not available</p>
-                                                {% endif %}
-                                            </a>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        {% endif %}
-
-                        {% if message.refined_queries %}
-                            <div class="refined-queries">
-                                <p>You could also try:</p>
-                                {% for refined_query in message.refined_queries %}
-                                    <button type="button" class="refined-query-button" data-query="{{ refined_query }}">{{ refined_query }}</button>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if message.page_links %}
-                            <div class="page-links">
-                                {% for link in message.page_links %}
-                                    {# These are direct links, not queries, so they use an <a> tag #}
-                                    <a href="{{ link.url }}" class="page-link-button" target="_blank" rel="noopener noreferrer">{{ link.text }}</a>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if message.followup_question %}
-                            <p class="followup-question">{{ message.followup_question }}</p>
-                        {% endif %}
+                {% if message.products %}
+                <div class="product-carousel">
+                    <div class="product-grid">
+                        {# The products are stored as dictionaries in the session, so we access keys with dot notation.
+                        #}
+                        {# The keys are camelCase (e.g., 'priceInfo') as they come from the .to_dict() conversion. #}
+                        {% for result in message.products %}
+                        {% set product = result.product %}
+                        <div class="product-card">
+                            <a href="{{ url_for('product_detail', product_id=result.id) }}" target="_blank"
+                                rel="noopener noreferrer">
+                                <img src="{{ (product.images[0].uri if product.images) or 'https://via.placeholder.com/200' }}"
+                                    alt="{{ product.title or 'Untitled Product' }}">
+                                <h3 class="product-title">{{ product.title or "Untitled Product" }}</h3>
+                                {% if product.price_info and product.price_info.price is defined and
+                                product.price_info.price is not none %}
+                                <p class="price">${{ "%.2f"|format(product.price_info.price) }}</p>
+                                {% else %}
+                                <p class="price price-unavailable">Price not available</p>
+                                {% endif %}
+                            </a>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
-            {% endif %}
+                {% endif %}
+
+                {% if message.refined_queries %}
+                <div class="refined-queries">
+                    <p>You could also try:</p>
+                    {% for refined_query in message.refined_queries %}
+                    <button type="button" class="refined-query-button" data-query="{{ refined_query }}">{{ refined_query
+                        }}</button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if message.page_links %}
+                <div class="page-links">
+                    {% for link in message.page_links %}
+                    {# These are direct links, not queries, so they use an <a> tag #}
+                        <a href="{{ link.url }}" class="page-link-button" target="_blank" rel="noopener noreferrer">{{
+                            link.text }}</a>
+                        {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if message.followup_question %}
+                <p class="followup-question">{{ message.followup_question }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
         {% endfor %}
     </div>
     <div class="chat-input-area">
         <form action="{{ url_for('api_chat') }}" method="post" class="chat-form" id="chat-form">
-            <textarea name="query" id="query-input" placeholder="Ask me anything about our products..." required autofocus autocomplete="off" rows="1"></textarea>
-            <button type="submit" title="Send">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <textarea name="query" id="query-input" placeholder="Ask me anything about our products..." required
+                autocomplete="off" rows="1"></textarea>
+            <button type="submit" aria-label="Send message">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
             </button>
         </form>
         <button type="button" id="mic-button" class="mic-button" title="Speak your query">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path
+                    d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+            </svg>
         </button>
         <form action="{{ url_for('clear_chat') }}" method="post" class="clear-chat-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <button type="submit">Clear Chat</button>
         </form>
     </div>
@@ -107,70 +123,70 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Add a specific class to the body for chat-page-only styling
-    document.body.classList.add('on-chat-page');
+    document.addEventListener('DOMContentLoaded', () => {
+        // Add a specific class to the body for chat-page-only styling
+        document.body.classList.add('on-chat-page');
 
-    const chatForm = document.getElementById('chat-form');
-    const queryInput = document.getElementById('query-input');
-    const chatHistory = document.getElementById('chat-history');
-    let conversationId = '{{ conversation_id }}'; // Get initial ID from Flask
+        const chatForm = document.getElementById('chat-form');
+        const queryInput = document.getElementById('query-input');
+        const chatHistory = document.getElementById('chat-history');
+        let conversationId = '{{ conversation_id }}'; // Get initial ID from Flask
 
-    // --- Auto-resize textarea ---
-    const adjustTextareaHeight = () => {
-        queryInput.style.height = 'auto'; // Reset height to calculate scrollHeight correctly
-        const maxHeight = 150; // Max height in pixels
-        const newHeight = Math.min(queryInput.scrollHeight, maxHeight);
-        queryInput.style.height = `${newHeight}px`;
-        // Show scrollbar only when max height is reached
-        queryInput.style.overflowY = (queryInput.scrollHeight > maxHeight) ? 'auto' : 'hidden';
-    };
+        // --- Auto-resize textarea ---
+        const adjustTextareaHeight = () => {
+            queryInput.style.height = 'auto'; // Reset height to calculate scrollHeight correctly
+            const maxHeight = 150; // Max height in pixels
+            const newHeight = Math.min(queryInput.scrollHeight, maxHeight);
+            queryInput.style.height = `${newHeight}px`;
+            // Show scrollbar only when max height is reached
+            queryInput.style.overflowY = (queryInput.scrollHeight > maxHeight) ? 'auto' : 'hidden';
+        };
 
-    queryInput.addEventListener('input', adjustTextareaHeight);
+        queryInput.addEventListener('input', adjustTextareaHeight);
 
-    // --- Handle Enter to submit, Shift+Enter for new line ---
-    queryInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault(); // Prevent new line
-            chatForm.requestSubmit();
-        }
-    });
+        // --- Handle Enter to submit, Shift+Enter for new line ---
+        queryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent new line
+                chatForm.requestSubmit();
+            }
+        });
 
-    const scrollToBottom = () => {
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-    };
+        const scrollToBottom = () => {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        };
 
-    const renderBotMessage = (message) => {
-        let contentHtml = '<div class="bot-message-content">';
-        if (message.user_query_types && message.user_query_types.length > 0) {
-            contentHtml += '<div class="intent-badges mb-2">';
-            message.user_query_types.forEach(type => {
-                contentHtml += `<span class="badge bg-secondary fw-normal">${type}</span>`;
-            });
-            contentHtml += '</div>';
-        }
-        if (message.generated_answer) {
-            contentHtml += `<div class="generated-answer">${message.generated_answer}</div>`;
-        }
-        if (message.text) {
-            contentHtml += `<p>${message.text}</p>`;
-        }
-        if (message.products && message.products.length > 0) {
-            contentHtml += '<div class="product-carousel"><div class="product-grid">';
-            message.products.forEach(result => {
-                const product = result.product;
-                const imageUrl = (product.images && product.images.length > 0) ? product.images[0].uri : 'https://via.placeholder.com/200';
-                const title = product.title || 'Untitled Product';
-                const detailUrl = `/product/${result.id}`;
-                
-                let priceHtml;
-                if (product.price_info && product.price_info.price !== null && typeof product.price_info.price !== 'undefined') {
-                    priceHtml = `<p class="price">$${product.price_info.price.toFixed(2)}</p>`;
-                } else {
-                    priceHtml = `<p class="price price-unavailable">Price not available</p>`;
-                }
+        const renderBotMessage = (message) => {
+            let contentHtml = '<div class="bot-message-content">';
+            if (message.user_query_types && message.user_query_types.length > 0) {
+                contentHtml += '<div class="intent-badges mb-2">';
+                message.user_query_types.forEach(type => {
+                    contentHtml += `<span class="badge bg-secondary fw-normal">${type}</span>`;
+                });
+                contentHtml += '</div>';
+            }
+            if (message.generated_answer) {
+                contentHtml += `<div class="generated-answer">${message.generated_answer}</div>`;
+            }
+            if (message.text) {
+                contentHtml += `<p>${message.text}</p>`;
+            }
+            if (message.products && message.products.length > 0) {
+                contentHtml += '<div class="product-carousel"><div class="product-grid">';
+                message.products.forEach(result => {
+                    const product = result.product;
+                    const imageUrl = (product.images && product.images.length > 0) ? product.images[0].uri : 'https://via.placeholder.com/200';
+                    const title = product.title || 'Untitled Product';
+                    const detailUrl = `/product/${result.id}`;
 
-                contentHtml += `
+                    let priceHtml;
+                    if (product.price_info && product.price_info.price !== null && typeof product.price_info.price !== 'undefined') {
+                        priceHtml = `<p class="price">$${product.price_info.price.toFixed(2)}</p>`;
+                    } else {
+                        priceHtml = `<p class="price price-unavailable">Price not available</p>`;
+                    }
+
+                    contentHtml += `
                     <div class="product-card">
                         <a href="${detailUrl}" target="_blank" rel="noopener noreferrer">
                             <img src="${imageUrl}" alt="${title}">
@@ -179,142 +195,145 @@ document.addEventListener('DOMContentLoaded', () => {
                         </a>
                     </div>
                 `;
-            });
-            contentHtml += '</div></div>';
-        }
-        if (message.refined_queries && message.refined_queries.length > 0) {
-            contentHtml += '<div class="refined-queries"><p>You could also try:</p>';
-            message.refined_queries.forEach(q => {
-                contentHtml += `<button type="button" class="refined-query-button" data-query="${q}">${q}</button>`;
-            });
-            contentHtml += '</div>';
-        }
-        if (message.page_links && message.page_links.length > 0) {
-            contentHtml += '<div class="page-links">';
-            message.page_links.forEach(link => {
-                contentHtml += `<a href="${link.url}" class="page-link-button" target="_blank" rel="noopener noreferrer">${link.text}</a>`;
-            });
-            contentHtml += '</div>';
-        }
-        if (message.followup_question) {
-            contentHtml += `<p class="followup-question">${message.followup_question}</p>`;
-        }
-        contentHtml += '</div>';
-        return contentHtml;
-    };
-
-    const addMessageToUI = (content, isUser) => {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `chat-message ${isUser ? 'user-message' : 'bot-message'}`;
-        messageDiv.innerHTML = content;
-        chatHistory.appendChild(messageDiv);
-        if (isUser) {
-            scrollToBottom();
-        } else {
-            // For bot messages, scroll to the top of the new message so the user sees it.
-            messageDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    };
-
-    const showTypingIndicator = () => {
-        const indicator = document.createElement('div');
-        indicator.className = 'chat-message bot-message typing-indicator';
-        indicator.innerHTML = '<p><span>.</span><span>.</span><span>.</span></p>';
-        indicator.id = 'typing-indicator';
-        chatHistory.appendChild(indicator);
-        scrollToBottom();
-    };
-
-    const removeTypingIndicator = () => {
-        const indicator = document.getElementById('typing-indicator');
-        if (indicator) indicator.remove();
-    };
-
-    chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const query = queryInput.value.trim();
-        if (!query) return;
-
-        addMessageToUI(`<p>${query}</p>`, true);
-        queryInput.value = '';
-        adjustTextareaHeight(); // Reset textarea height after submit
-        showTypingIndicator();
-
-        try {
-            const response = await fetch(chatForm.action, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: query, conversation_id: conversationId })
-            });
-
-            removeTypingIndicator();
-            const data = await response.json();
-
-            if (!response.ok) {
-                addMessageToUI(`<p>${data.bot_response.text || 'Sorry, an error occurred.'}</p>`, false);
-                return;
+                });
+                contentHtml += '</div></div>';
             }
+            if (message.refined_queries && message.refined_queries.length > 0) {
+                contentHtml += '<div class="refined-queries"><p>You could also try:</p>';
+                message.refined_queries.forEach(q => {
+                    contentHtml += `<button type="button" class="refined-query-button" data-query="${q}">${q}</button>`;
+                });
+                contentHtml += '</div>';
+            }
+            if (message.page_links && message.page_links.length > 0) {
+                contentHtml += '<div class="page-links">';
+                message.page_links.forEach(link => {
+                    contentHtml += `<a href="${link.url}" class="page-link-button" target="_blank" rel="noopener noreferrer">${link.text}</a>`;
+                });
+                contentHtml += '</div>';
+            }
+            if (message.followup_question) {
+                contentHtml += `<p class="followup-question">${message.followup_question}</p>`;
+            }
+            contentHtml += '</div>';
+            return contentHtml;
+        };
 
-            conversationId = data.conversation_id;
-            addMessageToUI(renderBotMessage(data.bot_response), false);
-        } catch (error) {
-            removeTypingIndicator();
-            console.error('Chat API error:', error);
-            addMessageToUI('<p>Sorry, I could not connect to the server.</p>', false);
-        }
-    });
+        const addMessageToUI = (content, isUser) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.innerHTML = content;
+            chatHistory.appendChild(messageDiv);
+            if (isUser) {
+                scrollToBottom();
+            } else {
+                // For bot messages, scroll to the top of the new message so the user sees it.
+                messageDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
 
-    chatHistory.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('refined-query-button')) {
-            queryInput.value = e.target.dataset.query;
-            adjustTextareaHeight(); // Adjust height for the new content
-            chatForm.requestSubmit();
-        }
-    });
+        const showTypingIndicator = () => {
+            const indicator = document.createElement('div');
+            indicator.className = 'chat-message bot-message typing-indicator';
+            indicator.innerHTML = '<p><span>.</span><span>.</span><span>.</span></p>';
+            indicator.id = 'typing-indicator';
+            chatHistory.appendChild(indicator);
+            scrollToBottom();
+        };
 
-    // --- Speech Recognition Logic ---
-    const micButton = document.getElementById('mic-button');
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const removeTypingIndicator = () => {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        };
 
-    if (SpeechRecognition && micButton) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false; // Stop listening after a pause
-        recognition.lang = 'en-US';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = queryInput.value.trim();
+            if (!query) return;
 
-        micButton.addEventListener('click', () => {
-            recognition.start();
-            micButton.classList.add('is-listening');
-            queryInput.placeholder = 'Listening...';
+            addMessageToUI(`<p>${query}</p>`, true);
+            queryInput.value = '';
+            adjustTextareaHeight(); // Reset textarea height after submit
+            showTypingIndicator();
+
+            try {
+                const response = await fetch(chatForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ query: query, conversation_id: conversationId })
+                });
+
+                removeTypingIndicator();
+                const data = await response.json();
+
+                if (!response.ok) {
+                    addMessageToUI(`<p>${data.bot_response.text || 'Sorry, an error occurred.'}</p>`, false);
+                    return;
+                }
+
+                conversationId = data.conversation_id;
+                addMessageToUI(renderBotMessage(data.bot_response), false);
+            } catch (error) {
+                removeTypingIndicator();
+                console.error('Chat API error:', error);
+                addMessageToUI('<p>Sorry, I could not connect to the server.</p>', false);
+            }
         });
 
-        recognition.onresult = (event) => {
-            const speechResult = event.results[0][0].transcript;
-            queryInput.value = speechResult;
-            adjustTextareaHeight(); // Adjust height for the new content
-            // Automatically submit the form after successful recognition
-            chatForm.requestSubmit();
-        };
+        chatHistory.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('refined-query-button')) {
+                queryInput.value = e.target.dataset.query;
+                adjustTextareaHeight(); // Adjust height for the new content
+                chatForm.requestSubmit();
+            }
+        });
 
-        recognition.onspeechend = () => {
-            recognition.stop();
-            micButton.classList.remove('is-listening');
-            queryInput.placeholder = 'Ask me anything about our products...';
-        };
+        // --- Speech Recognition Logic ---
+        const micButton = document.getElementById('mic-button');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            micButton.classList.remove('is-listening');
-            queryInput.placeholder = 'Sorry, I could not hear you. Please try again.';
-        };
-    } else if (micButton) {
-        // Hide the button if the browser doesn't support the API
-        micButton.style.display = 'none';
-        console.warn('Speech Recognition API not supported in this browser.');
-    }
+        if (SpeechRecognition && micButton) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false; // Stop listening after a pause
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
 
-    scrollToBottom();
-});
+            micButton.addEventListener('click', () => {
+                recognition.start();
+                micButton.classList.add('is-listening');
+                queryInput.placeholder = 'Listening...';
+            });
+
+            recognition.onresult = (event) => {
+                const speechResult = event.results[0][0].transcript;
+                queryInput.value = speechResult;
+                adjustTextareaHeight(); // Adjust height for the new content
+                // Automatically submit the form after successful recognition
+                chatForm.requestSubmit();
+            };
+
+            recognition.onspeechend = () => {
+                recognition.stop();
+                micButton.classList.remove('is-listening');
+                queryInput.placeholder = 'Ask me anything about our products...';
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                micButton.classList.remove('is-listening');
+                queryInput.placeholder = 'Sorry, I could not hear you. Please try again.';
+            };
+        } else if (micButton) {
+            // Hide the button if the browser doesn't support the API
+            micButton.style.display = 'none';
+            console.warn('Speech Recognition API not supported in this browser.');
+        }
+
+        scrollToBottom();
+    });
 </script>
 {% endblock %}
