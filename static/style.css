@@ -1073,6 +1073,8 @@ footer {
 .nav-link-with-icon svg {
     width: 20px;
     height: 20px;
+    min-width: 20px;
+    flex-shrink: 0;
     stroke: currentColor; /* Inherit color from the parent link */
 }
 

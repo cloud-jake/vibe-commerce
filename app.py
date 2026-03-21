@@ -1820,64 +1820,87 @@ def api_chat_gecx():
         session['chat_gecx_history'] = []
 
     try:
-        # 1. Initialize CX Client
-        client_options = None
-        if config.GECX_LOCATION != 'global':
-            client_options = ClientOptions(api_endpoint=f"{config.GECX_LOCATION}-dialogflow.googleapis.com")
-            
-        session_client = dialogflowcx_v3.SessionsClient(client_options=client_options)
-        
-        session_path = session_client.session_path(
-            project=config.PROJECT_ID,
-            location=config.GECX_LOCATION,
-            agent=config.GECX_AGENT_ID,
-            session=session_id,
-        )
+        import google.auth
+        import google.auth.transport.requests
+        import requests
 
-        cx_request = dialogflowcx_v3.DetectIntentRequest(
-            session=session_path,
-            query_input=dialogflowcx_v3.QueryInput(
-                text=dialogflowcx_v3.TextInput(text=query),
-                language_code="en"
-            )
-        )
+        creds, _ = google.auth.default()
+        auth_req = google.auth.transport.requests.Request()
+        creds.refresh(auth_req)
 
-        # 2. Call the Agent
-        response = session_client.detect_intent(request=cx_request)
+        # Use the App ID they provided (which is their GECX_AGENT_ID from .env)
+        app_id = config.GECX_AGENT_ID
+        session_path = f"projects/{config.GECX_PROJECT_ID}/locations/{config.GECX_LOCATION}/apps/{app_id}/sessions/{session_id}"
         
+        # Hardcoding the deployment ID provided by the user for the CES endpoint
+        deployment_id = "af972aa2-8fc9-41bb-a185-28fd2295e89f"
+        deployment_path = f"projects/{config.GECX_PROJECT_ID}/locations/{config.GECX_LOCATION}/apps/{app_id}/deployments/{deployment_id}"
+
+        url = f"https://ces.googleapis.com/v1beta/{session_path}:runSession"
+        headers = {
+            "Authorization": f"Bearer {creds.token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "config": {
+                "session": session_path,
+                "deployment": deployment_path
+            },
+            "inputs": [{"text": query}]
+        }
+
+        # 2. Call the CES Agent Endpoint
+        res = requests.post(url, headers=headers, json=payload)
+        
+        if res.status_code != 200:
+            print(f"CES API Error: {res.text}")
+            return jsonify({"error": f"CES API failed with {res.status_code}", "details": res.text}), 500
+
+        data = res.json()
         bot_text = ""
-        # CX Agents can return multiple messages
-        for message in response.query_result.response_messages:
-            if message.text:
-                bot_text += message.text.text[0] + "\n"
-
-        # 3. Handle Client-Side Tool calls (like add_to_cart)
-        for message in response.query_result.response_messages:
-            # Check standard Dialogflow CX Tool Call objects
-            if hasattr(message, "tool_call") and message.tool_call:
-                action_name = str(message.tool_call.action)
+        
+        # Parse the CES response
+        outputs = data.get("outputs", [])
+        if outputs:
+            for output in outputs:
+                if "text" in output:
+                    bot_text += output["text"] + "\n"
                 
-                if "add_to_cart" in action_name or "cart" in action_name.lower():
-                    # Extract args
-                    args = dict(message.tool_call.input_parameters)
-                    product_id = args.get("product_id")
-                    
-                    try:
-                        quantity = int(args.get("quantity", 1))
-                    except ValueError:
-                        quantity = 1
-                    
-                    if product_id:
-                        if 'cart' not in session:
-                            session['cart'] = {}
-                        session['cart'][product_id] = session['cart'].get(product_id, 0) + quantity
-                        session.modified = True
-                        
-                        bot_text += f"\n\n*(✅ Tool Execution Intercepted: Automatically added {quantity} of {product_id} to Vibe Commerce Cart!)*"
+                # Sometimes CES puts deep chunk data inside diagnosticInfo->messages for tools
+                diag = output.get("diagnosticInfo", {})
+                if diag:
+                    for msg in diag.get("messages", []):
+                        if msg.get("role") != "user":
+                            for chunk in msg.get("chunks", []):
+                                if "functionCall" in chunk or "toolCall" in chunk:
+                                    call_data = chunk.get("functionCall", chunk.get("toolCall", {}))
+                                    action_name = call_data.get("name", call_data.get("action", ""))
+                                    
+                                    if "add_to_cart" in str(action_name).lower() or "cart" in str(action_name).lower():
+                                        args = call_data.get("args", {})
+                                        if isinstance(args, str):
+                                            import json as pyjson
+                                            try: args = pyjson.loads(args)
+                                            except: pass
+                                        product_id = args.get("product_id")
+                                        
+                                        try:
+                                            quantity = int(args.get("quantity", 1))
+                                        except ValueError:
+                                            quantity = 1
+                                        
+                                        if product_id:
+                                            if 'cart' not in session:
+                                                session['cart'] = {}
+                                            session['cart'][product_id] = session['cart'].get(product_id, 0) + quantity
+                                            session.modified = True
+                                            bot_text += f"\n\n*(✅ Tool Execution Intercepted: Automatically added {quantity} of {product_id} to Vibe Commerce Cart!)*"
 
         # 4. Format and save history matching chat.html formats
+        bot_text_html = markdown_parser.render(bot_text.strip()) if bot_text else ""
+        
         bot_response = {
-            'text': bot_text.strip(),
+            'text': bot_text_html,
             'is_user': False,
             'products': [],
             'page_links': []
@@ -1889,13 +1912,10 @@ def api_chat_gecx():
         session.modified = True
 
         return jsonify({
-            "response": bot_response,
+            "bot_response": bot_response,
             "conversation_id": session_id
         })
 
-    except GoogleAPICallError as e:
-        print(f"Error calling Dialogflow CX API: {e}\n{traceback.format_exc()}")
-        return jsonify({"error": "Failed to communicate with Dialogflow CX Agent", "details": str(e)}), 500
     except Exception as e:
         print(f"Unexpected error in api_chat_gecx: {e}\n{traceback.format_exc()}")
         return jsonify({"error": "An unexpected error occurred"}), 500

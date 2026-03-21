@@ -35,7 +35,7 @@
                 {% endif %}
 
                 {% if message.text %}
-                <p>{{ message.text | safe }}</p>
+                <div class="markdown-body generated-answer">{{ message.text | safe }}</div>
                 {% endif %}
 
                 {% if message.products %}
@@ -169,7 +169,7 @@
                 contentHtml += `<div class="generated-answer">${message.generated_answer}</div>`;
             }
             if (message.text) {
-                contentHtml += `<p>${message.text}</p>`;
+                contentHtml += `<div class="markdown-body generated-answer">${message.text}</div>`;
             }
             if (message.products && message.products.length > 0) {
                 contentHtml += '<div class="product-carousel"><div class="product-grid">';

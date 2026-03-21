@@ -13,6 +13,7 @@ CATALOG_ID = os.environ.get("CATALOG_ID")
 SERVING_CONFIG_ID = os.environ.get("SERVING_CONFIG_ID")
 
 # --- GECX Agent Configuration ---
+GECX_PROJECT_ID = os.environ.get("GECX_PROJECT_ID", PROJECT_ID)
 GECX_AGENT_ID = os.environ.get("GECX_AGENT_ID")
 GECX_LOCATION = os.environ.get("GECX_LOCATION", "global")
 
