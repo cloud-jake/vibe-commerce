@@ -1859,6 +1859,15 @@ def api_chat_gecx():
         data = res.json()
         bot_text = ""
         
+        # 3. Format and save history matching chat.html formats
+        bot_response = {
+            'text': "",
+            'is_user': False,
+            'products': [],
+            'page_links': [],
+            'user_query_types': []
+        }
+        
         # Parse the CES response
         outputs = data.get("outputs", [])
         if outputs:
@@ -1872,11 +1881,19 @@ def api_chat_gecx():
                     for msg in diag.get("messages", []):
                         if msg.get("role") != "user":
                             for chunk in msg.get("chunks", []):
+                                # Extract client-side executions and log Intents
                                 if "functionCall" in chunk or "toolCall" in chunk:
                                     call_data = chunk.get("functionCall", chunk.get("toolCall", {}))
-                                    action_name = call_data.get("name", call_data.get("action", ""))
+                                    action_name = call_data.get("name", call_data.get("action", call_data.get("displayName", "")))
                                     
+                                    if "search" in str(action_name).lower() or "retail" in str(action_name).lower():
+                                        if "Product Search" not in bot_response['user_query_types']:
+                                            bot_response['user_query_types'].append("Product Search")
+
                                     if "add_to_cart" in str(action_name).lower() or "cart" in str(action_name).lower():
+                                        if "Add to Cart" not in bot_response['user_query_types']:
+                                            bot_response['user_query_types'].append("Add to Cart")
+                                            
                                         args = call_data.get("args", {})
                                         if isinstance(args, str):
                                             import json as pyjson
@@ -1895,16 +1912,35 @@ def api_chat_gecx():
                                             session['cart'][product_id] = session['cart'].get(product_id, 0) + quantity
                                             session.modified = True
                                             bot_text += f"\n\n*(✅ Tool Execution Intercepted: Automatically added {quantity} of {product_id} to Vibe Commerce Cart!)*"
+                                            
+                                # Scrape Server-Side API tools (like Retail Middleware) for Products to build UI Carousels
+                                if "toolResponse" in chunk:
+                                    tool_resp = chunk.get("toolResponse", {})
+                                    action_name = tool_resp.get("name", tool_resp.get("displayName", ""))
+                                    if "search" in str(action_name).lower() or "retail" in str(action_name).lower():
+                                        raw_products = tool_resp.get("response", {}).get("products", [])
+                                        # Deduplicate products by ID
+                                        seen_ids = set()
+                                        for p in raw_products:
+                                            p_id = p.get("id") or p.get("uri", "").split("/")[-1]
+                                            if p_id in seen_ids:
+                                                continue
+                                            seen_ids.add(p_id)
+                                            
+                                            price = p.get("price")
+                                            formatted_result = {
+                                                "id": p_id,
+                                                "product": {
+                                                    "title": p.get("title"),
+                                                    "description": p.get("description"),
+                                                    "images": [{"uri": p.get("thumbnail_url", "")}] if p.get("thumbnail_url") else [],
+                                                    "price_info": {"price": price} if price is not None else None
+                                                }
+                                            }
+                                            bot_response['products'].append(formatted_result)
 
-        # 4. Format and save history matching chat.html formats
         bot_text_html = markdown_parser.render(bot_text.strip()) if bot_text else ""
-        
-        bot_response = {
-            'text': bot_text_html,
-            'is_user': False,
-            'products': [],
-            'page_links': []
-        }
+        bot_response['text'] = bot_text_html
 
         # Update Session History
         session['chat_gecx_history'].append({'text': query, 'is_user': True})
