@@ -4,7 +4,7 @@ info:
   description: Middleware API for CX Agent Studio to interact with the Vibe Commerce Retail catalog.
   version: 1.0.0
 servers:
-  - url: https://YOUR_CLOUD_RUN_URL_HERE
+  - url: https://YOUR_CLOUD_RUN_URL_HEREx
 paths:
   /search_products:
     get:
