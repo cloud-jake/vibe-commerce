@@ -1647,21 +1647,28 @@ def view_cart():
                 product=product_id
             )
             product = product_client.get_product(name=product_name)
+            
+            quantity = item_data if isinstance(item_data, int) else item_data.get('quantity', 1)
 
             rich_cart_items[product_id] = {
                 'id': product.id,
                 'title': product.title,
                 'image': product.images[0].uri if product.images else '',
-                'price': item_data['price'],
-                'quantity': item_data['quantity']
+                'price': product.price_info.price if product.price_info else 0.0,
+                'quantity': quantity
             }
         except Exception as e:
             print(f"Error fetching product {product_id} for cart view: {e}")
             # If a product can't be fetched, we'll still show it with basic info.
+            quantity = item_data if isinstance(item_data, int) else item_data.get('quantity', 1)
+            price = 0.0 if isinstance(item_data, int) else item_data.get('price', 0.0)
             rich_cart_items[product_id] = {
                 'id': product_id, 'title': 'Product not available', 'image': '',
-                'price': item_data['price'], 'quantity': item_data['quantity']
+                'price': price, 'quantity': quantity
             }
+
+    # Accurately recalculate total using live fetched prices
+    total = sum(item['price'] * item['quantity'] for item in rich_cart_items.values())
 
     return render_template('cart.html', cart=rich_cart_items, total=total, event_type='shopping-cart-page-view')
 
@@ -1909,7 +1916,14 @@ def api_chat_gecx():
                                         if product_id:
                                             if 'cart' not in session:
                                                 session['cart'] = {}
-                                            session['cart'][product_id] = session['cart'].get(product_id, 0) + quantity
+                                            if product_id in session['cart']:
+                                                if isinstance(session['cart'][product_id], int):
+                                                    session['cart'][product_id] = {'price': 0.0, 'quantity': session['cart'][product_id] + quantity}
+                                                else:
+                                                    session['cart'][product_id]['quantity'] += quantity
+                                            else:
+                                                session['cart'][product_id] = {'price': 0.0, 'quantity': quantity}
+                                            
                                             session.modified = True
                                             bot_text += f"\n\n*(✅ Tool Execution Intercepted: Automatically added {quantity} of {product_id} to Vibe Commerce Cart!)*"
                                             
