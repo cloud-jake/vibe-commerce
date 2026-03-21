@@ -1928,12 +1928,26 @@ def api_chat_gecx():
                                             seen_ids.add(p_id)
                                             
                                             price = p.get("price")
+                                            
+                                            # Hydrate missing image since the middleware omits it to save context tokens
+                                            image_uri = p.get("thumbnail_url", "")
+                                            if not image_uri and p_id:
+                                                try:
+                                                    branch = getattr(config, 'BRANCH_NAME', 'default_branch')
+                                                    p_name = product_client.product_path(
+                                                        config.PROJECT_ID, config.LOCATION, 
+                                                        config.CATALOG_ID, branch, p_id)
+                                                    full_product = product_client.get_product(name=p_name)
+                                                    image_uri = full_product.images[0].uri if full_product.images else ""
+                                                except Exception as e:
+                                                    print(f"Image hydrate failed for {p_id}: {e}")
+
                                             formatted_result = {
                                                 "id": p_id,
                                                 "product": {
                                                     "title": p.get("title"),
                                                     "description": p.get("description"),
-                                                    "images": [{"uri": p.get("thumbnail_url", "")}] if p.get("thumbnail_url") else [],
+                                                    "images": [{"uri": image_uri}] if image_uri else [],
                                                     "price_info": {"price": price} if price is not None else None
                                                 }
                                             }
