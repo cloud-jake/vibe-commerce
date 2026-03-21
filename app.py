@@ -30,9 +30,11 @@ from google.cloud.retail_v2.types import (
     UserInfo,
     Interval,
 )
-from google.protobuf import json_format
 from google.protobuf import struct_pb2
 from werkzeug.middleware.proxy_fix import ProxyFix
+
+from google.cloud import dialogflowcx_v3
+from google.api_core.client_options import ClientOptions
 
 import config
 import utils
@@ -1785,6 +1787,125 @@ def purchase_confirmation():
     # Clear the last order from session after displaying it to prevent re-submission on refresh.
     session.pop('last_order', None)
     return render_template('purchase_confirmation.html', order=last_order, event_type='purchase-complete')
+# --- GECX Chat Integration ---
+
+@app.route('/chat_gecx')
+def chat_gecx():
+    """Renders the AI chat interface powered by Dialogflow CX Agent Studio."""
+    return render_template('chat_gecx.html')
+
+@app.route('/api/chat_gecx', methods=['POST'])
+def api_chat_gecx():
+    """Handles asynchronous chat requests to the GECX Agent."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    query = data.get('query', '').strip()
+    
+    # In CX, we need a session ID to maintain conversation state
+    if 'gecx_session_id' not in session:
+        session['gecx_session_id'] = str(uuid.uuid4())
+        
+    session_id = session['gecx_session_id']
+
+    if not query:
+        return jsonify({"error": "Query cannot be empty"}), 400
+
+    if not config.GECX_AGENT_ID:
+        return jsonify({"error": "GECX_AGENT_ID is not configured. Please set it in config.py or your .env file."}), 500
+
+    # Initialize chat history in session if it doesn't exist
+    if 'chat_gecx_history' not in session:
+        session['chat_gecx_history'] = []
+
+    try:
+        # 1. Initialize CX Client
+        client_options = None
+        if config.GECX_LOCATION != 'global':
+            client_options = ClientOptions(api_endpoint=f"{config.GECX_LOCATION}-dialogflow.googleapis.com")
+            
+        session_client = dialogflowcx_v3.SessionsClient(client_options=client_options)
+        
+        session_path = session_client.session_path(
+            project=config.PROJECT_ID,
+            location=config.GECX_LOCATION,
+            agent=config.GECX_AGENT_ID,
+            session=session_id,
+        )
+
+        cx_request = dialogflowcx_v3.DetectIntentRequest(
+            session=session_path,
+            query_input=dialogflowcx_v3.QueryInput(
+                text=dialogflowcx_v3.TextInput(text=query),
+                language_code="en"
+            )
+        )
+
+        # 2. Call the Agent
+        response = session_client.detect_intent(request=cx_request)
+        
+        bot_text = ""
+        # CX Agents can return multiple messages
+        for message in response.query_result.response_messages:
+            if message.text:
+                bot_text += message.text.text[0] + "\n"
+
+        # 3. Handle Client-Side Tool calls (like add_to_cart)
+        for message in response.query_result.response_messages:
+            # Check standard Dialogflow CX Tool Call objects
+            if hasattr(message, "tool_call") and message.tool_call:
+                action_name = str(message.tool_call.action)
+                
+                if "add_to_cart" in action_name or "cart" in action_name.lower():
+                    # Extract args
+                    args = dict(message.tool_call.input_parameters)
+                    product_id = args.get("product_id")
+                    
+                    try:
+                        quantity = int(args.get("quantity", 1))
+                    except ValueError:
+                        quantity = 1
+                    
+                    if product_id:
+                        if 'cart' not in session:
+                            session['cart'] = {}
+                        session['cart'][product_id] = session['cart'].get(product_id, 0) + quantity
+                        session.modified = True
+                        
+                        bot_text += f"\n\n*(✅ Tool Execution Intercepted: Automatically added {quantity} of {product_id} to Vibe Commerce Cart!)*"
+
+        # 4. Format and save history matching chat.html formats
+        bot_response = {
+            'text': bot_text.strip(),
+            'is_user': False,
+            'products': [],
+            'page_links': []
+        }
+
+        # Update Session History
+        session['chat_gecx_history'].append({'text': query, 'is_user': True})
+        session['chat_gecx_history'].append(bot_response)
+        session.modified = True
+
+        return jsonify({
+            "response": bot_response,
+            "conversation_id": session_id
+        })
+
+    except GoogleAPICallError as e:
+        print(f"Error calling Dialogflow CX API: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": "Failed to communicate with Dialogflow CX Agent", "details": str(e)}), 500
+    except Exception as e:
+        print(f"Unexpected error in api_chat_gecx: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+@app.route('/clear_chat_gecx', methods=['POST'])
+def clear_chat_gecx():
+    """Clears the GECX chat history."""
+    session.pop('chat_gecx_history', None)
+    session.pop('gecx_session_id', None)
+    return redirect(url_for('chat_gecx'))
 
 if __name__ == '__main__':
     # This block is for running the app directly with `python app.py`

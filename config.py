@@ -12,6 +12,11 @@ LOCATION = os.environ.get("LOCATION")
 CATALOG_ID = os.environ.get("CATALOG_ID")
 SERVING_CONFIG_ID = os.environ.get("SERVING_CONFIG_ID")
 
+# --- GECX Agent Configuration ---
+GECX_AGENT_ID = os.environ.get("GECX_AGENT_ID")
+GECX_LOCATION = os.environ.get("GECX_LOCATION", "global")
+
+
 # --- Recommendations Configuration ---
 RECOMMENDATION_SERVING_CONFIG_ID = os.environ.get("RECOMMENDATION_SERVING_CONFIG_ID")
 

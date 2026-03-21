@@ -2,8 +2,9 @@ Flask
 Authlib
 google-cloud-retail
 google-cloud-discoveryengine
-gunicorn
-python-dotenv
-markdown-it-py
+gunicorn==21.2.0
+python-dotenv==1.0.1
+markdown-it-py==3.0.0
 Flask-WTF
 Flask-Session
+google-cloud-dialogflow-cx
