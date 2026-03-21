@@ -4,7 +4,7 @@ info:
   description: Middleware API for CX Agent Studio to interact with the Vibe Commerce Retail catalog.
   version: 1.0.0
 servers:
-  - url: https://gecx-tools-api-713683707236.us-central1.run.app
+  - url: https://YOUR_CLOUD_RUN_URL_HERE
 paths:
   /search_products:
     get:
