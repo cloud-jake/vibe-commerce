@@ -21,4 +21,5 @@ COPY . .
 # Run the web service on container startup using gunicorn.
 # Cloud Run automatically sets the PORT environment variable.
 # Using 'exec' ensures that gunicorn runs as PID 1 and receives signals correctly.
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+# The --access-logfile - flag streams HTTP traffic access logs to stdout (Cloud Logging).
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 --access-logfile - app:app
