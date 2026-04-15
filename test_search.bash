@@ -16,6 +16,7 @@ else
   exit 1
 fi
 
+
 # Validate that required variables are set
 REQUIRED_VARS=(
   "PROJECT_ID"
