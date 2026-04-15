@@ -1,0 +1,51 @@
+steps:
+  # Deploy to Cloud Run using the source code in the repository.
+  # This step uses the Cloud SDK builder.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'vibe-commerce'
+      - '--source'
+      - '.'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - '${_REGION}'
+      - '--allow-unauthenticated'
+      # The set-env-vars flag maps the Cloud Build substitution variables
+      # back to the application's required environment variables.
+      - '--set-env-vars'
+      - 'PROJECT_ID=${PROJECT_ID},LOCATION=${_LOCATION},CATALOG_ID=${_CATALOG_ID},SERVING_CONFIG_ID=${_SERVING_CONFIG_ID},RECOMMENDATION_SERVING_CONFIG_ID=${_RECOMMENDATION_SERVING_CONFIG_ID},GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET},SECRET_KEY=${_SECRET_KEY},SITE_NAME=${_SITE_NAME},SITE_LOGO_URL=${_SITE_LOGO_URL},SUPPORT_PROJECT_ID=${_SUPPORT_PROJECT_ID},ENABLE_SUPPORT_AGENT=${_ENABLE_SUPPORT_AGENT},SUPPORT_LOCATION=${_SUPPORT_LOCATION},SUPPORT_COLLECTION_ID=${_SUPPORT_COLLECTION_ID},SUPPORT_ENGINE_ID=${_SUPPORT_ENGINE_ID},SUPPORT_SERVING_CONFIG_ID=${_SUPPORT_SERVING_CONFIG_ID},SUPPORT_URL_ORDER_SUPPORT=${_SUPPORT_URL_ORDER_SUPPORT},SUPPORT_URL_DEALS_AND_COUPONS=${_SUPPORT_URL_DEALS_AND_COUPONS},SUPPORT_URL_STORE_RELEVANT=${_SUPPORT_URL_STORE_RELEVANT},SUPPORT_URL_RETAIL_SUPPORT=${_SUPPORT_URL_RETAIL_SUPPORT},GECX_LOCATION=${_GECX_LOCATION},GECX_PROJECT_ID=${_GECX_PROJECT_ID},GECX_AGENT_ID=${_GECX_AGENT_ID}'
+
+substitutions:
+  # Define default values for substitutions here. 
+  # You can override these in your Cloud Build trigger settings.
+  _REGION: 'us-central1'
+  _LOCATION: 'global'
+  _CATALOG_ID: 'default_catalog'
+  _SERVING_CONFIG_ID: 'default_search'
+  _RECOMMENDATION_SERVING_CONFIG_ID: 'recently_viewed_default'
+  _SITE_NAME: 'Vibe Commerce'
+  _SITE_LOGO_URL: '/static/logo.png'
+  _ENABLE_SUPPORT_AGENT: 'true'
+  _SUPPORT_PROJECT_ID: '${PROJECT_ID}'
+  _SUPPORT_LOCATION: 'global'
+  _SUPPORT_COLLECTION_ID: 'default_collection'
+  _SUPPORT_SERVING_CONFIG_ID: 'default_search'
+  _SUPPORT_URL_ORDER_SUPPORT: '/orders'
+  _SUPPORT_URL_DEALS_AND_COUPONS: '/promotions'
+  _SUPPORT_URL_STORE_RELEVANT: '/stores'
+  _SUPPORT_URL_RETAIL_SUPPORT: '/support'
+  # The following should probably be set in the trigger itself or handled via Secret Manager
+  # _GOOGLE_CLIENT_ID: ''
+  # _GOOGLE_CLIENT_SECRET: ''
+  # _SECRET_KEY: ''
+  # _SUPPORT_ENGINE_ID: ''
+  # _GECX_LOCATION: ''
+  # _GECX_PROJECT_ID: ''
+  # _GECX_AGENT_ID: ''
+
+options:
+  logging: CLOUD_LOGGING_ONLY
