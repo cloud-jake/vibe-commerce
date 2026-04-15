@@ -2,15 +2,9 @@ Flask
 Authlib
 google-cloud-retail
 google-cloud-discoveryengine
-<<<<<<< HEAD
 gunicorn==21.2.0
 python-dotenv==1.0.1
 markdown-it-py==3.0.0
 Flask-WTF
 Flask-Session
 google-cloud-dialogflow-cx
-=======
-gunicorn
-python-dotenv
-markdown-it-py
->>>>>>> parent of fe9c046 (MAJOR UPDATE - optimizations and security checks with Antigravity)
