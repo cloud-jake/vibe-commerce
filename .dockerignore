@@ -71,6 +71,3 @@ __*
 
 # Log files
 *.log
-
-# Flask Session
-flask_session/
